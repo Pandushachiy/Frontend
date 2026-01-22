@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FeyBerry</string>
+    
+    <!-- Common -->
+    <string name="loading">Loading…</string>
+    <string name="error">Error</string>
+    <string name="retry">Retry</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    
+    <!-- Auth -->
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="name">Name</string>
+    <string name="age">Age</string>
+    <string name="gender">Gender</string>
+    <string name="logout">Logout</string>
+    
+    <!-- Navigation -->
+    <string name="nav_chat">Chat</string>
+    <string name="nav_health">Health</string>
+    <string name="nav_documents">Documents</string>
+    <string name="nav_mood">Mood</string>
+    <string name="nav_settings">Settings</string>
+    
+    <!-- Chat -->
+    <string name="chat_title">FeyBerry</string>
+    <string name="chat_placeholder">Write a message…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_voice">Voice input</string>
+    
+    <!-- Health -->
+    <string name="health_dashboard">Health Dashboard</string>
+    <string name="health_insights">Insights</string>
+    <string name="health_metrics">Metrics</string>
+    
+    <!-- Mood -->
+    <string name="mood_title">How are you feeling?</string>
+    <string name="mood_level">Mood Level</string>
+    <string name="stress_level">Stress Level</string>
+    <string name="journal_entry">Journal Entry</string>
+    <string name="journal_placeholder">Write how you\'re feeling…</string>
+    <string name="save_entry">Save Entry</string>
+    
+    <!-- Documents -->
+    <string name="documents_title">My Documents</string>
+    <string name="upload_document">Upload Document</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="processing">Processing…</string>
+    
+    <!-- Permissions -->
+    <string name="permission_camera">Camera permission is needed to take photos of documents</string>
+    <string name="permission_microphone">Microphone permission is needed for voice input</string>
+    <string name="permission_denied">Permission denied</string>
+</resources>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors - Teal/Cyan Health Theme -->
+    <color name="primary">#32B8C6</color>
+    <color name="primary_dark">#218084</color>
+    <color name="primary_light">#5FD4E0</color>
+    
+    <!-- Secondary Colors - Warm Accent -->
+    <color name="secondary">#5E5240</color>
+    <color name="secondary_light">#8A7B65</color>
+    
+    <!-- Tertiary - Alert/Accent -->
+    <color name="tertiary">#C0002F</color>
+    
+    <!-- Background Colors -->
+    <color name="background_light">#FCFCF9</color>
+    <color name="background_dark">#1F2121</color>
+    
+    <!-- Surface Colors -->
+    <color name="surface_light">#FFFFFF</color>
+    <color name="surface_dark">#262828</color>
+    
+    <!-- Text Colors -->
+    <color name="on_background_light">#133439</color>
+    <color name="on_background_dark">#F5F5F5</color>
+    
+    <!-- Status Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FF9800</color>
+    <color name="error_light">#C0012F</color>
+    <color name="error_dark">#FF5459</color>
+    
+    <!-- Glass Effect -->
+    <color name="glass_light">#1AFFFFFF</color>
+    <color name="glass_dark">#1A000000</color>
+    <color name="glass_border">#33FFFFFF</color>
+</resources>
