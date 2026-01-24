@@ -4,6 +4,7 @@ import com.health.companion.data.local.dao.ChatMessageDao;
 import com.health.companion.data.local.dao.ConversationDao;
 import com.health.companion.data.remote.api.ChatApi;
 import com.health.companion.services.WebSocketManager;
+import com.health.companion.utils.TokenManager;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -33,30 +34,36 @@ public final class ChatRepositoryImpl_Factory implements Factory<ChatRepositoryI
 
   private final Provider<WebSocketManager> webSocketManagerProvider;
 
+  private final Provider<TokenManager> tokenManagerProvider;
+
   public ChatRepositoryImpl_Factory(Provider<ChatApi> chatApiProvider,
       Provider<ChatMessageDao> chatMessageDaoProvider,
       Provider<ConversationDao> conversationDaoProvider,
-      Provider<WebSocketManager> webSocketManagerProvider) {
+      Provider<WebSocketManager> webSocketManagerProvider,
+      Provider<TokenManager> tokenManagerProvider) {
     this.chatApiProvider = chatApiProvider;
     this.chatMessageDaoProvider = chatMessageDaoProvider;
     this.conversationDaoProvider = conversationDaoProvider;
     this.webSocketManagerProvider = webSocketManagerProvider;
+    this.tokenManagerProvider = tokenManagerProvider;
   }
 
   @Override
   public ChatRepositoryImpl get() {
-    return newInstance(chatApiProvider.get(), chatMessageDaoProvider.get(), conversationDaoProvider.get(), webSocketManagerProvider.get());
+    return newInstance(chatApiProvider.get(), chatMessageDaoProvider.get(), conversationDaoProvider.get(), webSocketManagerProvider.get(), tokenManagerProvider.get());
   }
 
   public static ChatRepositoryImpl_Factory create(Provider<ChatApi> chatApiProvider,
       Provider<ChatMessageDao> chatMessageDaoProvider,
       Provider<ConversationDao> conversationDaoProvider,
-      Provider<WebSocketManager> webSocketManagerProvider) {
-    return new ChatRepositoryImpl_Factory(chatApiProvider, chatMessageDaoProvider, conversationDaoProvider, webSocketManagerProvider);
+      Provider<WebSocketManager> webSocketManagerProvider,
+      Provider<TokenManager> tokenManagerProvider) {
+    return new ChatRepositoryImpl_Factory(chatApiProvider, chatMessageDaoProvider, conversationDaoProvider, webSocketManagerProvider, tokenManagerProvider);
   }
 
   public static ChatRepositoryImpl newInstance(ChatApi chatApi, ChatMessageDao chatMessageDao,
-      ConversationDao conversationDao, WebSocketManager webSocketManager) {
-    return new ChatRepositoryImpl(chatApi, chatMessageDao, conversationDao, webSocketManager);
+      ConversationDao conversationDao, WebSocketManager webSocketManager,
+      TokenManager tokenManager) {
+    return new ChatRepositoryImpl(chatApi, chatMessageDao, conversationDao, webSocketManager, tokenManager);
   }
 }

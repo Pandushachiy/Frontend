@@ -11,30 +11,44 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -53,6 +68,7 @@ import androidx.core.content.FileProvider
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.health.companion.data.remote.api.MessageDTO
+import com.health.companion.presentation.components.GlassTheme
 import com.health.companion.utils.VoiceEventLogger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -60,17 +76,22 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.math.max
 import java.util.regex.Pattern
 import android.graphics.Color as AndroidColor
 
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
-    bottomBarPadding: PaddingValues = PaddingValues(0.dp)
+    bottomBarPadding: PaddingValues = PaddingValues(0.dp),
+    onMessageSent: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val messages by viewModel.messages.collectAsState()
+    
+    // Debug: log when messages change
+    LaunchedEffect(messages.size, messages.lastOrNull()?.content?.length) {
+        android.util.Log.d("UI_DEBUG", "Messages recompose: size=${messages.size}, lastLen=${messages.lastOrNull()?.content?.length}")
+    }
     val currentMessage by viewModel.currentMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
@@ -78,16 +99,20 @@ fun ChatScreen(
     val partialVoiceResult by viewModel.partialVoiceResult.collectAsState()
     val isUploading by viewModel.isUploading.collectAsState()
     val conversations by viewModel.conversations.collectAsState()
+    val streamStatus by viewModel.streamStatus.collectAsState()
+    val isStreaming by viewModel.isStreaming.collectAsState()
     val currentConversationId by viewModel.currentConversationId.collectAsState()
     val messageSendStatus by viewModel.messageSendStatus.collectAsState()
 
-    val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    // Telegram-style: reverseLayout = true, scroll to 0 = bottom
+    val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     val view = LocalView.current
+    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         viewModel.voiceEvents.collect { event ->
@@ -101,7 +126,6 @@ fun ChatScreen(
 
     var showAttachMenu by remember { mutableStateOf(false) }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
-    var inputBarHeightPx by remember { mutableStateOf(0) }
     var showChatsSheet by remember { mutableStateOf(false) }
     val chatSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -129,11 +153,9 @@ fun ChatScreen(
         hasAudioPermission = isGranted
         VoiceEventLogger.log(context, "audio_permission=$isGranted")
         if (isGranted) {
-            // Avoid launching voice immediately after permission dialog on Oppo.
             pendingVoiceAfterPermission = true
         }
     }
-
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -179,140 +201,283 @@ fun ChatScreen(
         return FileProvider.getUriForFile(context, "${context.packageName}.provider", imageFile)
     }
 
-    // Insets and padding
-    val imeBottomPx = WindowInsets.ime.getBottom(density)
-    val navBottomPx = WindowInsets.navigationBars.getBottom(density)
-    val bottomBarPx = with(density) { bottomBarPadding.calculateBottomPadding().toPx().toInt() }
-    val navBottomDp = with(density) { max(navBottomPx, bottomBarPx).toDp() }
-    val listBottomInsetsDp = if (imeBottomPx > 0) 0.dp else navBottomDp
-    val topInsetsDp = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val inputBarHeightDp = with(density) { inputBarHeightPx.toDp() }
+    // Reversed messages for reverseLayout (newest at index 0)
+    val reversedMessages = remember(messages) { messages.reversed() }
 
-    // Scroll state
-    val isAtBottom by remember {
-        derivedStateOf {
-            val lastIndex = listState.layoutInfo.totalItemsCount - 1
-            lastIndex < 0 || listState.layoutInfo.visibleItemsInfo.any { it.index == lastIndex }
+    // Auto-scroll to bottom (index 0 in reverseLayout) when new message arrives
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            delay(100)
+            listState.animateScrollToItem(0)
         }
     }
 
-    // Auto-scroll on new messages (only when user is at bottom or sends a message)
-    val latestMessage = messages.lastOrNull()
-    LaunchedEffect(latestMessage?.id) {
-        if (latestMessage != null) {
-            val shouldScroll = isAtBottom || latestMessage.role == "user"
-            if (shouldScroll) {
-                delay(50)
-                listState.animateScrollToItem(messages.size - 1)
-            }
-        }
-    }
-
-    LaunchedEffect(imeBottomPx) {
-        if (imeBottomPx > 0 && messages.isNotEmpty() && isAtBottom) {
-            delay(50)
-            listState.scrollToItem(messages.size - 1)
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.surfaceContainerLow
-                    )
-                )
-            )
-    ) {
-        if (showChatsSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showChatsSheet = false },
-                sheetState = chatSheetState
-            ) {
-                Column(
+    // Chats bottom sheet - Premium Glassmorphism Design
+    if (showChatsSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showChatsSheet = false },
+            sheetState = chatSheetState,
+            containerColor = Color(0xFF1A1A2E),
+            dragHandle = {
+                // Custom glass drag handle
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Чаты",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
+                        .padding(vertical = 12.dp)
+                        .size(40.dp, 4.dp)
+                        .background(
+                            Color.White.copy(alpha = 0.3f),
+                            RoundedCornerShape(2.dp)
                         )
-                        TextButton(onClick = {
-                            viewModel.createNewConversation()
-                            showChatsSheet = false
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(Modifier.width(4.dp))
-                            Text("Новый")
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF1A1A2E),
+                                Color(0xFF16213E)
+                            )
+                        )
+                    )
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                // Header with gradient accent
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Icon with glow
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            GlassTheme.accentPrimary.copy(alpha = 0.3f),
+                                            GlassTheme.accentSecondary.copy(alpha = 0.2f)
+                                        )
+                                    ),
+                                    CircleShape
+                                )
+                                .border(1.dp, GlassTheme.accentPrimary.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = null,
+                                tint = GlassTheme.accentPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Сессии чатов",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "${conversations.size} диалогов",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.5f)
+                            )
                         }
                     }
+                    
+                    // New chat button with gradient
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        GlassTheme.accentPrimary,
+                                        GlassTheme.accentSecondary
+                                    )
+                                )
+                            )
+                            .clickable {
+                                viewModel.createNewConversation()
+                                showChatsSheet = false
+                            }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "Новый",
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
 
-                    Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(20.dp))
 
-                    if (conversations.isEmpty()) {
-                        Text(
-                            text = "Чатов пока нет",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(16.dp))
-                    } else {
-                        conversations.forEach { convo ->
-                            Surface(
+                if (conversations.isEmpty()) {
+                    // Empty state with animation
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                color = if (convo.id == currentConversationId) {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                } else {
-                                    MaterialTheme.colorScheme.surface
-                                },
-                                shape = RoundedCornerShape(12.dp)
+                                    .size(80.dp)
+                                    .background(
+                                        Color.White.copy(alpha = 0.05f),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(
+                                Text("💬", fontSize = 36.sp)
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = "Начните первый диалог",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = "Нажмите «Новый» чтобы создать чат",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                } else {
+                    // Conversations list - simple, no heavy animations
+                    conversations.forEach { convo ->
+                        val isSelected = convo.id == currentConversationId
+                        val dateFormat = remember { SimpleDateFormat("dd MMM, HH:mm", Locale("ru")) }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (isSelected)
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                GlassTheme.accentPrimary.copy(alpha = 0.2f),
+                                                GlassTheme.accentSecondary.copy(alpha = 0.1f)
+                                            )
+                                        )
+                                    else
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.08f),
+                                                Color.White.copy(alpha = 0.04f)
+                                            )
+                                        )
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isSelected)
+                                        GlassTheme.accentPrimary.copy(alpha = 0.3f)
+                                    else
+                                        Color.White.copy(alpha = 0.1f),
+                                    RoundedCornerShape(16.dp)
+                                )
+                                .clickable {
+                                    viewModel.selectConversation(convo.id)
+                                    showChatsSheet = false
+                                }
+                                .padding(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Chat avatar
+                                Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .size(44.dp)
+                                        .background(
+                                            if (isSelected)
+                                                GlassTheme.accentPrimary.copy(alpha = 0.2f)
+                                            else
+                                                Color.White.copy(alpha = 0.1f),
+                                            RoundedCornerShape(12.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = convo.title,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            maxLines = 1
+                                    Text(text = "🫐", fontSize = 20.sp)
+                                }
+                                
+                                Spacer(Modifier.width(12.dp))
+                                
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = convo.title.ifEmpty { "Новый диалог" },
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.9f),
+                                        maxLines = 1
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.Schedule,
+                                            contentDescription = null,
+                                            tint = Color.White.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(12.dp)
                                         )
+                                        Spacer(Modifier.width(4.dp))
                                         Text(
-                                            text = "Обновлено: ${Date(convo.updatedAt)}",
+                                            text = dateFormat.format(Date(convo.updatedAt)),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = Color.White.copy(alpha = 0.5f)
                                         )
                                     }
-                                    IconButton(onClick = {
-                                        viewModel.deleteConversation(convo.id)
-                                    }) {
+                                }
+                                
+                                // Selected indicator or delete
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(
+                                                GlassTheme.accentPrimary.copy(alpha = 0.2f),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         Icon(
-                                            imageVector = Icons.Default.Delete,
+                                            Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = GlassTheme.accentPrimary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                } else {
+                                    IconButton(
+                                        onClick = { viewModel.deleteConversation(convo.id) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
                                             contentDescription = "Удалить",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                    IconButton(onClick = {
-                                        viewModel.selectConversation(convo.id)
-                                        showChatsSheet = false
-                                    }) {
-                                        Icon(
-                                            imageVector = Icons.Default.ChevronRight,
-                                            contentDescription = "Открыть"
+                                            tint = Color.White.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
@@ -320,105 +485,375 @@ fun ChatScreen(
                         }
                     }
                 }
+                
+                Spacer(Modifier.height(16.dp))
             }
         }
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = topInsetsDp + 12.dp,
-                bottom = inputBarHeightDp + listBottomInsetsDp + 12.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+    }
+
+    // Get bottom padding from Scaffold
+    val navBarPadding = bottomBarPadding.calculateBottomPadding()
+    
+    // Calculate ime insets directly
+    val imeInsets = WindowInsets.ime
+    val imeDensity = LocalDensity.current
+    val imeBottom = imeInsets.getBottom(imeDensity)
+    val imeBottomDp = with(imeDensity) { imeBottom.toDp() }
+    
+    // Use MAX of (ime height) or (navbar padding) - never both!
+    val effectiveBottom = maxOf(imeBottomDp, navBarPadding)
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(GlassTheme.backgroundGradient)
+            .padding(bottom = effectiveBottom)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            if (messages.isEmpty() && isSyncing) {
-                items(4) {
-                    ChatSkeletonBubble()
+            // Messages list - takes all available space
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .statusBarsPadding(), // Add status bar padding
+                reverseLayout = true, // TELEGRAM-STYLE: newest messages at bottom
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = 12.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Loading indicator - only show when waiting for response, not during typing animation
+                if (isLoading || isUploading) {
+                    item { TypingIndicator(isUploading, streamStatus) }
                 }
-            } else if (messages.isEmpty()) {
-                item { ChatEmptyState() }
-            }
 
-            itemsIndexed(messages, key = { _, message -> message.id }) { index, message ->
-                val prev = messages.getOrNull(index - 1)
-                val isGrouped = prev?.role == message.role
-                ChatBubble(
-                    message = message,
-                    status = messageSendStatus[message.id],
-                    showAvatar = !isGrouped,
-                    modifier = Modifier.padding(top = if (isGrouped) 2.dp else 10.dp),
-                    onRetry = {
-                        viewModel.retrySendMessage(message.id, message.content)
+                // Messages (reversed order for reverseLayout)
+                itemsIndexed(reversedMessages, key = { _, message -> message.id }) { index, message ->
+                    val next = reversedMessages.getOrNull(index + 1)
+                    val isGrouped = next?.role == message.role
+                    val isUser = message.role == "user"
+                    
+                    // Smooth animation for new messages
+                    var appeared by remember { mutableStateOf(false) }
+                    LaunchedEffect(message.id) {
+                        delay(if (index == 0) 50L else 0L) // Slight delay for newest
+                        appeared = true
                     }
-                )
-            }
-
-            if (isLoading || isUploading) {
-                item { TypingIndicator(isUploading) }
-            }
-        }
-
-        if (!isAtBottom && messages.size > 3) {
-            SmallFloatingActionButton(
-                onClick = {
-                    coroutineScope.launch {
-                        listState.animateScrollToItem(messages.size - 1)
+                    
+                    AnimatedVisibility(
+                        visible = appeared,
+                        enter = fadeIn(
+                            animationSpec = tween(
+                                durationMillis = 200,
+                                easing = FastOutSlowInEasing
+                            )
+                        ) + slideInHorizontally(
+                            animationSpec = tween(
+                                durationMillis = 250,
+                                easing = FastOutSlowInEasing
+                            ),
+                            initialOffsetX = { if (isUser) it / 3 else -it / 3 }
+                        )
+                    ) {
+                        // Animate streaming messages
+                        val shouldAnimate = message.agent_name == "streaming"
+                        
+                        ChatBubble(
+                            message = message,
+                            status = messageSendStatus[message.id],
+                            showAvatar = !isGrouped,
+                            modifier = Modifier.padding(top = if (isGrouped) 2.dp else 10.dp),
+                            animate = shouldAnimate,
+                            onRetry = {
+                                viewModel.retrySendMessage(message.id, message.content)
+                            }
+                        )
                     }
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = listBottomInsetsDp + inputBarHeightDp + 16.dp)
-            ) {
-                Icon(Icons.Default.KeyboardArrowDown, "Вниз")
-            }
-        }
+                }
 
-        if (uiState is ChatUiState.Error) {
-            Surface(
+                // Empty state or skeleton at "bottom" (top visually)
+                if (reversedMessages.isEmpty() && isSyncing) {
+                    items(4) {
+                        ChatSkeletonBubble()
+                    }
+                } else if (reversedMessages.isEmpty()) {
+                    item { ChatEmptyState() }
+                }
+            }
+
+            // Error banner above input
+            if (uiState is ChatUiState.Error) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = (uiState as? ChatUiState.Error)?.message ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.clearError() }, Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Close, "Закрыть", Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
+            // INPUT AREA - Premium unified design with proper alignment
+            Row(
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = topInsetsDp),
-                color = MaterialTheme.colorScheme.errorContainer
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Chat list button - same size as mic button
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.1f))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                        .clickable {
+                            viewModel.refreshConversations()
+                            showChatsSheet = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = "Чаты",
+                        tint = GlassTheme.accentPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                Spacer(Modifier.width(8.dp))
+
+                // Main input container
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(Color.White.copy(alpha = 0.1f))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(22.dp))
+                        .padding(start = 4.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = (uiState as? ChatUiState.Error)?.message ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
+                    // Attach button inside
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable { showAttachMenu = !showAttachMenu },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (showAttachMenu) Icons.Default.Close else Icons.Default.Add,
+                            contentDescription = "Прикрепить",
+                            tint = GlassTheme.textSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Recording indicator inline
+                    if (isRecording) {
+                        val transition = rememberInfiniteTransition(label = "rec")
+                        val recAlpha by transition.animateFloat(
+                            0.5f, 1f,
+                            infiniteRepeatable(tween(500), RepeatMode.Reverse),
+                            label = "rec_alpha"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(GlassTheme.statusError.copy(alpha = recAlpha), CircleShape)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+
+                    BasicTextField(
+                        value = currentMessage,
+                        onValueChange = viewModel::updateCurrentMessage,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 36.dp, max = 100.dp)
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused && reversedMessages.isNotEmpty()) {
+                                    coroutineScope.launch {
+                                        delay(200)
+                                        listState.animateScrollToItem(0)
+                                    }
+                                }
+                            },
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            color = GlassTheme.textPrimary
+                        ),
+                        cursorBrush = SolidColor(GlassTheme.accentPrimary),
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences,
+                            imeAction = ImeAction.Send
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onSend = {
+                                if (currentMessage.isNotBlank() && !isLoading) {
+                                    viewModel.sendMessage(currentMessage)
+                                    onMessageSent()
+                                    coroutineScope.launch {
+                                        delay(100)
+                                        listState.animateScrollToItem(0)
+                                    }
+                                }
+                            }
+                        ),
+                        decorationBox = { innerTextField ->
+                            Box(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                if (currentMessage.isEmpty()) {
+                                    Text(
+                                        text = if (isRecording) "Говорите..." else "Сообщение",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = GlassTheme.textTertiary
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
                     )
-                    IconButton(onClick = { viewModel.clearError() }, Modifier.size(24.dp)) {
-                        Icon(Icons.Default.Close, "Закрыть", Modifier.size(16.dp))
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                // Mic/Send button - same size as chat button
+                val micPulseTransition = rememberInfiniteTransition(label = "mic_pulse")
+                val micPulse by micPulseTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(600, easing = EaseInOutCubic),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "mic_pulse"
+                )
+
+                Box(
+                    modifier = Modifier.size(44.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Pulse effect for recording
+                    if (isRecording) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .scale(micPulse)
+                                .background(
+                                    GlassTheme.statusError.copy(alpha = 0.25f),
+                                    CircleShape
+                                )
+                        )
+                    }
+                    
+                    // Main button
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when {
+                                    isRecording -> GlassTheme.statusError
+                                    else -> GlassTheme.accentPrimary
+                                }
+                            )
+                            .clickable(enabled = !isLoading || currentMessage.isBlank()) {
+                                if (currentMessage.isNotBlank()) {
+                                    viewModel.sendMessage(currentMessage)
+                                    onMessageSent()
+                                    coroutineScope.launch {
+                                        delay(100)
+                                        listState.animateScrollToItem(0)
+                                    }
+                                } else {
+                                    view.isHapticFeedbackEnabled = true
+                                    view.performHapticFeedback(HapticFeedbackConstantsCompat.KEYBOARD_PRESS)
+                                    if (hasAudioPermission) {
+                                        if (pendingVoiceAfterPermission) {
+                                            pendingVoiceAfterPermission = false
+                                        }
+                                        val prefs = context.getSharedPreferences("voice_prefs", android.content.Context.MODE_PRIVATE)
+                                        val autoSend = prefs.getBoolean("auto_send_voice", true)
+                                        VoiceEventLogger.log(context, "mic_click record_toggle")
+                                        viewModel.toggleVoiceInput(autoSend)
+                                    } else {
+                                        VoiceEventLogger.log(context, "mic_click request_permission")
+                                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        view.performHapticFeedback(HapticFeedbackConstantsCompat.LONG_PRESS)
+                                    }
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when {
+                            isLoading && currentMessage.isNotBlank() -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                            isRecording -> {
+                                Icon(
+                                    Icons.Default.Stop,
+                                    "Стоп",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            currentMessage.isNotBlank() -> {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    "Отправить",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            else -> {
+                                Icon(
+                                    Icons.Default.Mic,
+                                    "Голос",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
-        }
-
-        // Input bar over content
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(bottom = if (imeBottomPx > 0) 0.dp else navBottomDp)
-                .imePadding()
-                .background(MaterialTheme.colorScheme.surface)
-                .onSizeChanged { inputBarHeightPx = it.height }
-        ) {
+            
+            // Attach menu above input
             if (showAttachMenu) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    AttachOption(Icons.Default.CameraAlt, "Камера", MaterialTheme.colorScheme.primary) {
+                    AttachOption(Icons.Default.CameraAlt, "Камера", GlassTheme.accentPrimary) {
                         if (hasCameraPermission) {
                             photoUri = createPhotoUri()
                             takePictureLauncher.launch(photoUri!!)
@@ -426,10 +861,10 @@ fun ChatScreen(
                             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     }
-                    AttachOption(Icons.Default.Image, "Фото", MaterialTheme.colorScheme.secondary) {
+                    AttachOption(Icons.Default.Image, "Фото", GlassTheme.accentSecondary) {
                         pickImageLauncher.launch("image/*")
                     }
-                    AttachOption(Icons.Default.Description, "Файл", MaterialTheme.colorScheme.tertiary) {
+                    AttachOption(Icons.Default.Description, "Файл", GlassTheme.accentTertiary) {
                         pickFileLauncher.launch(arrayOf(
                             "application/pdf",
                             "application/msword",
@@ -439,160 +874,29 @@ fun ChatScreen(
                     }
                 }
             }
+        }
 
-            if (isRecording) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val transition = rememberInfiniteTransition(label = "mic")
-                    val scale by transition.animateFloat(1f, 1.3f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "scale")
-                    Icon(Icons.Default.Mic, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.scale(scale))
-                    Spacer(Modifier.width(12.dp))
-                    val statusText = if (partialVoiceResult.isNotEmpty()) partialVoiceResult else "Запись..."
-                    Text(statusText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
+        // Scroll to bottom FAB
+        val showScrollFab by remember {
+            derivedStateOf {
+                listState.firstVisibleItemIndex > 2
             }
+        }
 
-            val micPulseTransition = rememberInfiniteTransition(label = "mic_pulse")
-            val micPulse by micPulseTransition.animateFloat(
-                initialValue = 0.9f,
-                targetValue = 1.2f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(700, easing = EaseInOutCubic),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "mic_pulse"
-            )
-
-            Row(
+        if (showScrollFab) {
+            SmallFloatingActionButton(
+                onClick = {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(0)
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 100.dp)
             ) {
-                IconButton(onClick = {
-                    viewModel.refreshConversations()
-                    showChatsSheet = true
-                }, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = "Чаты",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                IconButton(onClick = { showAttachMenu = !showAttachMenu }, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = if (showAttachMenu) Icons.Default.Close else Icons.Default.Add,
-                        contentDescription = "Прикрепить",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                OutlinedTextField(
-                    value = currentMessage,
-                    onValueChange = viewModel::updateCurrentMessage,
-                    modifier = Modifier.weight(1f).heightIn(min = 44.dp, max = 110.dp),
-                    placeholder = { Text(if (isRecording) "Говорите..." else "Сообщение") },
-                    maxLines = 4,
-                    singleLine = false,
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences,
-                        imeAction = ImeAction.Send
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSend = {
-                            if (currentMessage.isNotBlank() && !isLoading) {
-                                viewModel.sendMessage(currentMessage)
-                                keyboardController?.hide()
-                            }
-                        }
-                    ),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                    )
-                )
-
-                Spacer(Modifier.width(8.dp))
-
-                if (currentMessage.isBlank()) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (isRecording) {
-                            Box(
-                                modifier = Modifier
-                                    .size(54.dp)
-                                    .scale(micPulse)
-                                    .background(
-                                        MaterialTheme.colorScheme.error.copy(alpha = 0.25f),
-                                        CircleShape
-                                    )
-                            )
-                        }
-                        FilledIconButton(
-                            onClick = {
-                                view.isHapticFeedbackEnabled = true
-                                view.performHapticFeedback(HapticFeedbackConstantsCompat.KEYBOARD_PRESS)
-                                if (hasAudioPermission) {
-                                    if (pendingVoiceAfterPermission) {
-                                        pendingVoiceAfterPermission = false
-                                    }
-                                    val prefs = context.getSharedPreferences("voice_prefs", android.content.Context.MODE_PRIVATE)
-                                    val autoSend = prefs.getBoolean("auto_send_voice", true)
-                                    VoiceEventLogger.log(context, "mic_click record_toggle")
-                                    viewModel.toggleVoiceInput(autoSend)
-                                } else {
-                                    VoiceEventLogger.log(context, "mic_click request_permission")
-                                    audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                    view.performHapticFeedback(HapticFeedbackConstantsCompat.LONG_PRESS)
-                                }
-                            },
-                            modifier = Modifier.size(40.dp),
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(
-                                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
-                                contentDescription = if (isRecording) "Стоп" else "Голос",
-                                tint = if (isRecording) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                } else {
-                    FilledIconButton(
-                        onClick = {
-                            viewModel.sendMessage(currentMessage)
-                            keyboardController?.hide()
-                        },
-                        enabled = !isLoading,
-                        modifier = Modifier.size(40.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                        } else {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                "Отправить",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
+                Icon(Icons.Default.KeyboardArrowDown, "Вниз")
             }
         }
     }
@@ -615,30 +919,242 @@ private fun AttachOption(icon: androidx.compose.ui.graphics.vector.ImageVector, 
 
 @Composable
 private fun ChatEmptyState() {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier.size(56.dp).clip(CircleShape).background(
-                    Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
-                ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Psychology, null, tint = Color.White, modifier = Modifier.size(28.dp))
-            }
+    val infiniteTransition = rememberInfiniteTransition(label = "blueberry")
+    
+    // Плавное дыхание основного круга
+    val breathe by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathe"
+    )
+    
+    // Вращение внешнего кольца
+    val outerRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(30000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "outer_rotation"
+    )
+    
+    // Обратное вращение среднего кольца
+    val middleRotation by infiniteTransition.animateFloat(
+        initialValue = 360f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(20000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "middle_rotation"
+    )
+    
+    // Пульсация свечения
+    val glowPulse by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+    
+    // Плавающие ягоды вокруг
+    val float1 by infiniteTransition.animateFloat(
+        initialValue = -8f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "float1"
+    )
+    
+    val float2 by infiniteTransition.animateFloat(
+        initialValue = 6f,
+        targetValue = -6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "float2"
+    )
+    
+    val float3 by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3500, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "float3"
+    )
 
-            Spacer(Modifier.height(12.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Внешнее вращающееся кольцо с точками
+        Box(
+            modifier = Modifier
+                .size(180.dp)
+                .graphicsLayer { rotationZ = outerRotation }
+        ) {
+            // Орбитальные точки
+            listOf(0f, 60f, 120f, 180f, 240f, 300f).forEachIndexed { index, angle ->
+                val dotPulse by infiniteTransition.animateFloat(
+                    initialValue = 0.4f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1200 + index * 150, easing = EaseInOutCubic),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "dot_$index"
+                )
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .graphicsLayer { rotationZ = angle }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = 4.dp)
+                            .size((3 + index % 3).dp)
+                            .background(
+                                GlassTheme.accentPrimary.copy(alpha = dotPulse * 0.8f),
+                                CircleShape
+                            )
+                    )
+                }
+            }
+        }
+        
+        // Среднее вращающееся кольцо
+        Box(
+            modifier = Modifier
+                .size(130.dp)
+                .graphicsLayer { rotationZ = middleRotation }
+                .border(
+                    1.dp,
+                    Brush.sweepGradient(
+                        colors = listOf(
+                            Color(0xFF6366F1).copy(alpha = 0.4f),
+                            Color(0xFF8B5CF6).copy(alpha = 0.1f),
+                            Color(0xFFA855F7).copy(alpha = 0.4f),
+                            Color(0xFF6366F1).copy(alpha = 0.1f)
+                        )
+                    ),
+                    CircleShape
+                )
+        )
+        
+        // Свечение фона
+        Box(
+            modifier = Modifier
+                .size(110.dp)
+                .scale(breathe)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF6366F1).copy(alpha = glowPulse),
+                            Color(0xFF8B5CF6).copy(alpha = glowPulse * 0.5f),
+                            Color.Transparent
+                        )
+                    ),
+                    CircleShape
+                )
+        )
+        
+        // Основной круг с градиентом
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .scale(breathe)
+                .clip(CircleShape)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFF6366F1),  // Indigo
+                            Color(0xFF8B5CF6),  // Purple  
+                            Color(0xFF4F46E5)   // Deep indigo
+                        )
+                    )
+                )
+                .border(
+                    2.dp,
+                    Color.White.copy(alpha = 0.2f),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Черника emoji
             Text(
-                "Начните чат — напишите сообщение ниже",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                text = "🫐",
+                fontSize = 36.sp
+            )
+        }
+        
+        // Плавающие маленькие черники
+        Box(
+            modifier = Modifier
+                .offset(x = (-55).dp, y = float1.dp)
+        ) {
+            Text(text = "🫐", fontSize = 18.sp, modifier = Modifier.graphicsLayer { alpha = 0.7f })
+        }
+        
+        Box(
+            modifier = Modifier
+                .offset(x = 60.dp, y = float2.dp)
+        ) {
+            Text(text = "🫐", fontSize = 14.sp, modifier = Modifier.graphicsLayer { alpha = 0.6f })
+        }
+        
+        Box(
+            modifier = Modifier
+                .offset(x = 30.dp, y = (50 + float3).dp)
+        ) {
+            Text(text = "🫐", fontSize = 12.sp, modifier = Modifier.graphicsLayer { alpha = 0.5f })
+        }
+        
+        Box(
+            modifier = Modifier
+                .offset(x = (-40).dp, y = (-45 + float2).dp)
+        ) {
+            Text(text = "🫐", fontSize = 16.sp, modifier = Modifier.graphicsLayer { alpha = 0.65f })
+        }
+        
+        // Искрящиеся точки
+        listOf(
+            -70f to -20f, 75f to 15f, -30f to 60f, 50f to -55f, -60f to 40f, 65f to 50f
+        ).forEachIndexed { index, (x, y) ->
+            val sparkle by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800 + index * 200, easing = EaseInOutCubic),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "sparkle_$index"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .offset(x = x.dp, y = y.dp)
+                    .size(3.dp)
+                    .graphicsLayer { alpha = sparkle }
+                    .background(
+                        Color.White.copy(alpha = 0.8f),
+                        CircleShape
+                    )
             )
         }
     }
@@ -650,6 +1166,7 @@ private fun ChatBubble(
     status: MessageSendStatus?,
     showAvatar: Boolean,
     modifier: Modifier = Modifier,
+    animate: Boolean = false,
     onRetry: () -> Unit = {}
 ) {
     val isUser = message.role == "user"
@@ -658,14 +1175,8 @@ private fun ChatBubble(
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start) {
         if (!isUser) {
             if (showAvatar) {
-                Box(
-                    modifier = Modifier.size(36.dp).clip(CircleShape).background(
-                        Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
-                    ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.SmartToy, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                }
+                // Animated blueberry avatar
+                BlueberryAvatar()
                 Spacer(Modifier.width(8.dp))
                 ProviderDot(
                     provider = message.provider,
@@ -673,25 +1184,61 @@ private fun ChatBubble(
                     modelUsed = message.model_used
                 )
                 Spacer(Modifier.width(6.dp))
+            } else {
+                Spacer(Modifier.width(50.dp)) // Space for missing avatar
             }
         }
 
         Column(horizontalAlignment = if (isUser) Alignment.End else Alignment.Start, modifier = Modifier.widthIn(max = 340.dp)) {
-            if (!isUser && message.agent_name != null && message.agent_name != "chat" && message.agent_name != "offline") {
+            // Show agent name label (but not for streaming or standard chat)
+            if (!isUser && message.agent_name != null && message.agent_name != "chat" && message.agent_name != "offline" && message.agent_name != "streaming") {
                 Text(message.agent_name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium, modifier = Modifier.padding(bottom = 4.dp))
             }
 
-            Surface(
-                color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = if (isUser) 20.dp else 4.dp, bottomEnd = if (isUser) 4.dp else 20.dp),
-                tonalElevation = if (isUser) 0.dp else 2.dp
+            // Glassmorphism message bubble
+            Box(
+                modifier = Modifier
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 20.dp, 
+                            topEnd = 20.dp, 
+                            bottomStart = if (isUser) 20.dp else 4.dp, 
+                            bottomEnd = if (isUser) 4.dp else 20.dp
+                        )
+                    )
+                    .background(
+                        if (isUser) 
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    GlassTheme.accentPrimary,
+                                    GlassTheme.accentPrimary.copy(alpha = 0.8f)
+                                )
+                            )
+                        else 
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.1f),
+                                    Color.White.copy(alpha = 0.05f)
+                                )
+                            )
+                    )
             ) {
-                Text(
-                    formattedText,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    style = MaterialTheme.typography.bodySmall.copy(lineHeight = 19.sp),
-                    color = if (isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (isUser) {
+                    Text(
+                        formattedText,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 20.sp),
+                        color = Color.White
+                    )
+                } else {
+                    TypewriterText(
+                        fullText = formattedText,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = GlassTheme.textPrimary,
+                        animationEnabled = animate
+                    )
+                }
             }
 
             if (isUser && status == MessageSendStatus.Failed) {
@@ -713,12 +1260,57 @@ private fun ChatBubble(
         if (isUser) {
             if (showAvatar) {
                 Spacer(Modifier.width(8.dp))
-                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
+                Box(modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(GlassTheme.accentPrimary), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
+            } else {
+                Spacer(Modifier.width(44.dp)) // Space for missing avatar
             }
         }
     }
+}
+
+/**
+ * Typewriter animation for chat messages
+ */
+@Composable
+private fun TypewriterText(
+    fullText: String,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodySmall,
+    color: Color = GlassTheme.textPrimary,
+    animationEnabled: Boolean = true
+) {
+    android.util.Log.d("TYPEWRITER", "Compose: fullText.len=${fullText.length}, animate=$animationEnabled")
+    
+    // Track visible chars - starts at 0, never resets
+    var visibleChars by remember { mutableStateOf(0) }
+    
+    // Single animation loop that keeps running
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(25)
+            visibleChars++
+        }
+    }
+    
+    val displayText = if (animationEnabled && visibleChars < fullText.length) {
+        fullText.take(visibleChars)
+    } else {
+        fullText
+    }
+    
+    android.util.Log.d("TYPEWRITER", "Display: visible=$visibleChars, showing=${displayText.length}")
+    
+    Text(
+        text = displayText,
+        modifier = modifier,
+        style = style.copy(lineHeight = 20.sp),
+        color = color
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -847,34 +1439,122 @@ private fun getVibrator(context: Context): Vibrator? {
 }
 
 @Composable
-private fun TypingIndicator(isUploading: Boolean) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(
-                Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
+private fun BlueberryAvatar(size: Dp = 36.dp) {
+    val infiniteTransition = rememberInfiniteTransition(label = "blueberry_avatar")
+    
+    // Subtle breathing animation
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "avatar_scale"
+    )
+    
+    // Gentle rotation wobble
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = -3f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "avatar_rotation"
+    )
+    
+    Box(
+        modifier = Modifier
+            .size(size)
+            .scale(scale)
+            .graphicsLayer { rotationZ = rotation }
+            .clip(CircleShape)
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF6366F1),
+                        Color(0xFF8B5CF6)
+                    )
+                )
             ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isUploading) {
-                Icon(Icons.Default.CloudUpload, null, tint = Color.White, modifier = Modifier.size(20.dp))
-            } else {
-                Icon(Icons.Default.SmartToy, null, tint = Color.White, modifier = Modifier.size(20.dp))
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "🫐",
+            fontSize = (size.value * 0.5f).sp
+        )
+    }
+}
+
+@Composable
+private fun TypingIndicator(isUploading: Boolean, streamStatus: String = "") {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Avatar
+        if (isUploading) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(listOf(GlassTheme.accentPrimary, GlassTheme.accentSecondary))
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.CloudUpload, null, tint = Color.White, modifier = Modifier.size(12.dp))
             }
+        } else {
+            BlueberryAvatar(size = 24.dp)
         }
 
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
 
-        Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 4.dp)) {
-            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Compact glass bubble with dots
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp, 12.dp, 12.dp, 4.dp))
+                .background(Color.White.copy(alpha = 0.1f))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp, 12.dp, 12.dp, 4.dp))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), 
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 if (isUploading) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Загрузка...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(10.dp), 
+                        strokeWidth = 1.5.dp, 
+                        color = GlassTheme.accentPrimary
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Загрузка", 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = GlassTheme.textSecondary
+                    )
                 } else {
+                    // Animated dots only
                     val transition = rememberInfiniteTransition(label = "dots")
                     repeat(3) { index ->
-                        val alpha by transition.animateFloat(0.3f, 1f, infiniteRepeatable(tween(600, delayMillis = index * 200), RepeatMode.Reverse), label = "a$index")
-                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = alpha)))
+                        val alpha by transition.animateFloat(
+                            0.3f, 1f, 
+                            infiniteRepeatable(
+                                tween(400, delayMillis = index * 120), 
+                                RepeatMode.Reverse
+                            ), 
+                            label = "dot_alpha_$index"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .clip(CircleShape)
+                                .background(GlassTheme.accentPrimary.copy(alpha = alpha))
+                        )
                     }
                 }
             }

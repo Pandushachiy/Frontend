@@ -165,11 +165,16 @@ class DocumentRepositoryImpl @Inject constructor(
     
     override suspend fun getDocuments(): Result<List<DocumentResponse>> {
         return try {
+            Timber.d("Fetching documents from API...")
             val response = documentApi.getDocuments()
+            Timber.d("API response: total=${response.total}, page=${response.page}, size=${response.size}")
             Timber.d("Fetched ${response.items.size} documents")
+            response.items.forEachIndexed { index, doc ->
+                Timber.d("Doc[$index]: id=${doc.id}, filename=${doc.filename}, status=${doc.status}")
+            }
             Result.success(response.items)
         } catch (e: Exception) {
-            Timber.e(e, "Failed to fetch documents")
+            Timber.e(e, "Failed to fetch documents: ${e.message}")
             Result.failure(e)
         }
     }

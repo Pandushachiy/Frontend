@@ -5,6 +5,7 @@ import com.health.companion.data.local.dao.ConversationDao;
 import com.health.companion.data.remote.api.ChatApi;
 import com.health.companion.data.repositories.ChatRepository;
 import com.health.companion.services.WebSocketManager;
+import com.health.companion.utils.TokenManager;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.Preconditions;
@@ -35,30 +36,36 @@ public final class RepositoryModule_ProvideChatRepositoryFactory implements Fact
 
   private final Provider<WebSocketManager> webSocketManagerProvider;
 
+  private final Provider<TokenManager> tokenManagerProvider;
+
   public RepositoryModule_ProvideChatRepositoryFactory(Provider<ChatApi> chatApiProvider,
       Provider<ChatMessageDao> chatMessageDaoProvider,
       Provider<ConversationDao> conversationDaoProvider,
-      Provider<WebSocketManager> webSocketManagerProvider) {
+      Provider<WebSocketManager> webSocketManagerProvider,
+      Provider<TokenManager> tokenManagerProvider) {
     this.chatApiProvider = chatApiProvider;
     this.chatMessageDaoProvider = chatMessageDaoProvider;
     this.conversationDaoProvider = conversationDaoProvider;
     this.webSocketManagerProvider = webSocketManagerProvider;
+    this.tokenManagerProvider = tokenManagerProvider;
   }
 
   @Override
   public ChatRepository get() {
-    return provideChatRepository(chatApiProvider.get(), chatMessageDaoProvider.get(), conversationDaoProvider.get(), webSocketManagerProvider.get());
+    return provideChatRepository(chatApiProvider.get(), chatMessageDaoProvider.get(), conversationDaoProvider.get(), webSocketManagerProvider.get(), tokenManagerProvider.get());
   }
 
   public static RepositoryModule_ProvideChatRepositoryFactory create(
       Provider<ChatApi> chatApiProvider, Provider<ChatMessageDao> chatMessageDaoProvider,
       Provider<ConversationDao> conversationDaoProvider,
-      Provider<WebSocketManager> webSocketManagerProvider) {
-    return new RepositoryModule_ProvideChatRepositoryFactory(chatApiProvider, chatMessageDaoProvider, conversationDaoProvider, webSocketManagerProvider);
+      Provider<WebSocketManager> webSocketManagerProvider,
+      Provider<TokenManager> tokenManagerProvider) {
+    return new RepositoryModule_ProvideChatRepositoryFactory(chatApiProvider, chatMessageDaoProvider, conversationDaoProvider, webSocketManagerProvider, tokenManagerProvider);
   }
 
   public static ChatRepository provideChatRepository(ChatApi chatApi, ChatMessageDao chatMessageDao,
-      ConversationDao conversationDao, WebSocketManager webSocketManager) {
-    return Preconditions.checkNotNullFromProvides(RepositoryModule.INSTANCE.provideChatRepository(chatApi, chatMessageDao, conversationDao, webSocketManager));
+      ConversationDao conversationDao, WebSocketManager webSocketManager,
+      TokenManager tokenManager) {
+    return Preconditions.checkNotNullFromProvides(RepositoryModule.INSTANCE.provideChatRepository(chatApi, chatMessageDao, conversationDao, webSocketManager, tokenManager));
   }
 }

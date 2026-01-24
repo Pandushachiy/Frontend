@@ -1,7 +1,21 @@
 package com.health.companion.presentation.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -14,9 +28,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.health.companion.presentation.components.GlassTheme
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -75,70 +94,85 @@ fun NavGraph(
     } == true
 
     Scaffold(
+        containerColor = Color.Transparent,
         bottomBar = {
             if (showBottomBar) {
-                Surface(
-                    tonalElevation = 3.dp,
-                    shadowElevation = 6.dp,
-                    shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh
-                ) {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        tonalElevation = 0.dp
-                    ) {
-                    bottomNavItems.forEach { item ->
-                        NavigationBarItem(
-                            icon = { 
-                                Icon(
-                                    imageVector = if (currentDestination?.hierarchy?.any {
-                                            it.route == item.route
-                                        } == true
-                                    ) {
-                                        item.selectedIcon
-                                    } else {
-                                        item.icon
-                                    },
-                                    contentDescription = item.label,
-                                    modifier = Modifier
-                                )
-                            },
-                            label = {
-                                Text(
-                                    item.label,
-                                    style = if (currentDestination?.hierarchy?.any { it.route == item.route } == true) {
-                                        MaterialTheme.typography.labelMedium
-                                    } else {
-                                        MaterialTheme.typography.labelSmall
-                                    },
-                                    maxLines = 1
-                                ) 
-                            },
-                            selected = currentDestination?.hierarchy?.any { 
-                                it.route == item.route 
-                            } == true,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    // Pop up to the start destination of the graph to
-                                    // avoid building up a large stack of destinations
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    // Avoid multiple copies of the same destination
-                                    launchSingleTop = true
-                                    // Restore state when reselecting a previously selected item
-                                    restoreState = true
-                                }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            )
+                // Unified Premium Navigation Bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(
+                            1.dp,
+                            Color.White.copy(alpha = 0.12f),
+                            RoundedCornerShape(26.dp)
                         )
-                    }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        bottomNavItems.forEach { item ->
+                            val isSelected = currentDestination?.hierarchy?.any {
+                                it.route == item.route
+                            } == true
+                            
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .padding(horizontal = 2.dp)
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .then(
+                                        if (isSelected) Modifier.background(
+                                            GlassTheme.accentPrimary.copy(alpha = 0.15f)
+                                        ) else Modifier
+                                    )
+                                    .clickable {
+                                        navController.navigate(item.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSelected) item.selectedIcon else item.icon,
+                                        contentDescription = item.label,
+                                        tint = if (isSelected) 
+                                            GlassTheme.accentPrimary 
+                                        else 
+                                            Color.White.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        item.label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isSelected) 
+                                            GlassTheme.accentPrimary 
+                                        else 
+                                            Color.White.copy(alpha = 0.5f),
+                                        maxLines = 1,
+                                        fontSize = 9.sp
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -186,52 +220,61 @@ fun NavGraph(
                 route = Route.Main.route,
                 startDestination = Route.Dashboard.route // Dashboard первая
             ) {
-                composable(Route.Dashboard.route) {
-                    Box(modifier = Modifier.padding(paddingValues)) {
-                        DashboardScreen(
-                            onNavigate = { route ->
-                                navController.navigate(route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        )
+                composable(Route.Dashboard.route) { backStackEntry ->
+                    // DashboardViewModel scoped to Main graph for sharing
+                    val mainEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry(Route.Main.route)
                     }
+                    DashboardScreen(
+                        viewModel = hiltViewModel(mainEntry),
+                        onNavigate = { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        bottomPadding = paddingValues.calculateBottomPadding()
+                    )
                 }
 
                 composable(Route.Chat.route) { backStackEntry ->
-                    val owner = remember(backStackEntry) {
-                        runCatching { navController.getBackStackEntry(Route.Main.route) }
-                            .getOrElse { backStackEntry }
+                    val mainEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry(Route.Main.route)
                     }
+                    // Get shared DashboardViewModel
+                    val dashboardViewModel: com.health.companion.presentation.screens.dashboard.DashboardViewModel = hiltViewModel(mainEntry)
+                    
                     ChatScreen(
-                        viewModel = hiltViewModel(owner),
-                        bottomBarPadding = paddingValues
+                        viewModel = hiltViewModel(mainEntry),
+                        bottomBarPadding = paddingValues,
+                        onMessageSent = {
+                            // Обновить Dashboard после отправки сообщения
+                            dashboardViewModel.onMessageSent()
+                        }
                     )
                 }
 
                 composable(Route.Documents.route) {
-                    Box(modifier = Modifier.padding(paddingValues)) {
-                        DocumentsScreen()
-                    }
+                    DocumentsScreen(
+                        bottomPadding = paddingValues.calculateBottomPadding()
+                    )
                 }
 
                 composable(Route.Settings.route) {
-                    Box(modifier = Modifier.padding(paddingValues)) {
-                        SettingsScreen(
-                            onNavigateToLogin = {
-                                navController.navigate(Route.Auth.route) {
-                                    popUpTo(Route.Main.route) { inclusive = true }
-                                }
-                            },
-                            onOpenProfile = {
-                                navController.navigate(Route.Profile.route)
+                    SettingsScreen(
+                        onNavigateToLogin = {
+                            navController.navigate(Route.Auth.route) {
+                                popUpTo(Route.Main.route) { inclusive = true }
                             }
-                        )
-                    }
+                        },
+                        onOpenProfile = {
+                            navController.navigate(Route.Profile.route)
+                        },
+                        bottomPadding = paddingValues.calculateBottomPadding()
+                    )
                 }
 
                 composable(Route.Profile.route) {

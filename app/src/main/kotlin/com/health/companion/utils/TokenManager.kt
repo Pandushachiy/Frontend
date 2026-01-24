@@ -19,19 +19,45 @@ class TokenManager @Inject constructor(
         private val ACCESS_TOKEN = stringPreferencesKey("access_token")
         private val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
         private val USER_ID = stringPreferencesKey("user_id")
+        private val USER_NAME = stringPreferencesKey("user_name")
+        private val USER_EMAIL = stringPreferencesKey("user_email")
     }
     
     suspend fun saveTokens(
         accessToken: String,
         refreshToken: String,
-        userId: String
+        userId: String,
+        userName: String? = null,
+        userEmail: String? = null
     ) {
         dataStore.edit { preferences ->
             preferences[ACCESS_TOKEN] = accessToken
             preferences[REFRESH_TOKEN] = refreshToken
             preferences[USER_ID] = userId
+            userName?.let { preferences[USER_NAME] = it }
+            userEmail?.let { preferences[USER_EMAIL] = it }
         }
-        Timber.d("Tokens saved for user: $userId")
+        Timber.d("Tokens saved for user: $userId (name: $userName, email: $userEmail)")
+    }
+    
+    suspend fun saveUserInfo(name: String, email: String) {
+        dataStore.edit { preferences ->
+            preferences[USER_NAME] = name
+            preferences[USER_EMAIL] = email
+        }
+        Timber.d("User info saved: $name, $email")
+    }
+    
+    suspend fun getUserName(): String? {
+        return dataStore.data.map { preferences ->
+            preferences[USER_NAME]
+        }.first()
+    }
+    
+    suspend fun getUserEmail(): String? {
+        return dataStore.data.map { preferences ->
+            preferences[USER_EMAIL]
+        }.first()
     }
     
     suspend fun getAccessToken(): String? {

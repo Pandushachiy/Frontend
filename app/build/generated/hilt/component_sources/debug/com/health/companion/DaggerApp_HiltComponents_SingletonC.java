@@ -809,7 +809,7 @@ public final class DaggerApp_HiltComponents_SingletonC {
           return (T) NetworkModule_ProvideJsonFactory.provideJson();
 
           case 10: // com.health.companion.data.repositories.ChatRepository 
-          return (T) RepositoryModule_ProvideChatRepositoryFactory.provideChatRepository(singletonCImpl.provideChatApiProvider.get(), singletonCImpl.provideChatMessageDaoProvider.get(), singletonCImpl.provideConversationDaoProvider.get(), singletonCImpl.webSocketManagerProvider.get());
+          return (T) RepositoryModule_ProvideChatRepositoryFactory.provideChatRepository(singletonCImpl.provideChatApiProvider.get(), singletonCImpl.provideChatMessageDaoProvider.get(), singletonCImpl.provideConversationDaoProvider.get(), singletonCImpl.webSocketManagerProvider.get(), singletonCImpl.tokenManagerProvider.get());
 
           case 11: // com.health.companion.data.remote.api.ChatApi 
           return (T) NetworkModule_ProvideChatApiFactory.provideChatApi(singletonCImpl.provideRetrofitProvider.get());

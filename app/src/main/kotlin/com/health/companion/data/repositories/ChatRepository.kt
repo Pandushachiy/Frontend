@@ -1,5 +1,6 @@
 package com.health.companion.data.repositories
 
+import com.health.companion.BuildConfig
 import com.health.companion.data.local.dao.ChatMessageDao
 import com.health.companion.data.local.dao.ConversationDao
 import com.health.companion.data.local.database.ChatMessageEntity
@@ -13,18 +14,48 @@ import com.health.companion.data.remote.api.CreateConversationRequest
 import com.health.companion.data.remote.api.MessageDTO
 import com.health.companion.services.WebSocketManager
 import com.health.companion.services.WebSocketMessage
+import com.health.companion.utils.TokenManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import okhttp3.sse.EventSource
+import okhttp3.sse.EventSourceListener
+import okhttp3.sse.EventSources
+import org.json.JSONObject
 import retrofit2.HttpException
 import timber.log.Timber
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.coroutines.resume
 
 interface ChatRepository {
     suspend fun sendMessage(message: String, conversationId: String?): Result<ChatMessageResponse>
+    
+    /**
+     * SSE Streaming - посылает сообщение и получает ответ потоком
+     */
+    suspend fun sendMessageStream(
+        message: String,
+        conversationId: String?,
+        onStatus: (String) -> Unit,
+        onToken: (String) -> Unit,
+        onDone: (messageId: String, fullContent: String, newConversationId: String?) -> Unit,
+        onError: (String) -> Unit
+    )
+    
     fun getConversationMessages(conversationId: String): Flow<List<MessageDTO>>
     fun getLocalConversationsFlow(): Flow<List<ConversationEntity>>
     suspend fun getConversations(): Result<List<ConversationDTO>>
@@ -41,8 +72,14 @@ class ChatRepositoryImpl @Inject constructor(
     private val chatApi: ChatApi,
     private val chatMessageDao: ChatMessageDao,
     private val conversationDao: ConversationDao,
-    private val webSocketManager: WebSocketManager
+    private val webSocketManager: WebSocketManager,
+    private val tokenManager: TokenManager
 ) : ChatRepository {
+    
+    private val streamClient = OkHttpClient.Builder()
+        .readTimeout(120, TimeUnit.SECONDS)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .build()
     
     override suspend fun sendMessage(
         message: String,
@@ -165,6 +202,154 @@ class ChatRepositoryImpl @Inject constructor(
                 conversation_id = newConversationId
             )
         )
+    }
+    
+    /**
+     * SSE Streaming implementation using OkHttp EventSource
+     */
+    override suspend fun sendMessageStream(
+        message: String,
+        conversationId: String?,
+        onStatus: (String) -> Unit,
+        onToken: (String) -> Unit,
+        onDone: (messageId: String, fullContent: String, newConversationId: String?) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        android.util.Log.d("SSE_DEBUG", "sendMessageStream called with message: $message")
+        
+        val token = tokenManager.getAccessToken()
+        if (token == null) {
+            android.util.Log.e("SSE_DEBUG", "No access token!")
+            onError("Требуется авторизация")
+            return
+        }
+        
+        android.util.Log.d("SSE_DEBUG", "Token OK, preparing request...")
+        
+        val body = JSONObject().apply {
+            put("message", message)
+            conversationId?.let { put("conversation_id", it) }
+        }.toString()
+        
+        val url = "${BuildConfig.API_BASE_URL}/chat/send/stream"
+        android.util.Log.d("SSE_DEBUG", "URL: $url")
+        
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Accept", "text/event-stream")
+            .addHeader("Cache-Control", "no-cache")
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .build()
+        
+        val savedMessage = message
+        val savedConversationId = conversationId
+        
+        android.util.Log.d("SSE_DEBUG", "Creating EventSource...")
+        
+        suspendCancellableCoroutine { continuation ->
+            val listener = object : EventSourceListener() {
+                override fun onOpen(eventSource: EventSource, response: Response) {
+                    android.util.Log.d("SSE_DEBUG", "SSE OPENED! Response: ${response.code}")
+                }
+                
+                override fun onEvent(
+                    eventSource: EventSource,
+                    id: String?,
+                    type: String?,
+                    data: String
+                ) {
+                    android.util.Log.d("SSE_DEBUG", "SSE EVENT: type=$type, data=$data")
+                    try {
+                        val json = JSONObject(data)
+                        
+                        when (json.optString("type")) {
+                            "status" -> {
+                                val status = json.optString("status")
+                                Timber.d("SSE status: $status")
+                                onStatus(status)
+                            }
+                            "token" -> {
+                                val content = json.optString("content")
+                                onToken(content)
+                            }
+                            "done" -> {
+                                val messageId = json.optString("message_id")
+                                val fullContent = json.optString("full_content")
+                                val newConvId = json.optString("conversation_id").takeIf { it.isNotBlank() }
+                                
+                                // Save to DB in background
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    try {
+                                        val convId = newConvId ?: savedConversationId ?: UUID.randomUUID().toString()
+                                        ensureConversationExists(convId, suggestTitleFromMessage(savedMessage))
+                                        
+                                        chatMessageDao.insert(
+                                            ChatMessageEntity(
+                                                id = UUID.randomUUID().toString(),
+                                                conversationId = convId,
+                                                content = savedMessage,
+                                                role = "user"
+                                            )
+                                        )
+                                        
+                                        chatMessageDao.insert(
+                                            ChatMessageEntity(
+                                                id = messageId.ifEmpty { UUID.randomUUID().toString() },
+                                                conversationId = convId,
+                                                content = fullContent,
+                                                role = "assistant"
+                                            )
+                                        )
+                                        conversationDao.updateUpdatedAt(convId, System.currentTimeMillis())
+                                    } catch (e: Exception) {
+                                        Timber.e(e, "Failed to save messages to DB")
+                                    }
+                                }
+                                
+                                Timber.d("SSE done: messageId=$messageId")
+                                onDone(messageId, fullContent, newConvId)
+                                eventSource.cancel()
+                                if (continuation.isActive) continuation.resume(Unit)
+                            }
+                            "error" -> {
+                                val errorMsg = json.optString("message", "Неизвестная ошибка")
+                                Timber.e("SSE error event: $errorMsg")
+                                onError(errorMsg)
+                                eventSource.cancel()
+                                if (continuation.isActive) continuation.resume(Unit)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Timber.w(e, "Failed to parse SSE data: $data")
+                    }
+                }
+                
+                override fun onClosed(eventSource: EventSource) {
+                    android.util.Log.d("SSE_DEBUG", "SSE CLOSED")
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
+                
+                override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
+                    android.util.Log.e("SSE_DEBUG", "SSE FAILURE! code=${response?.code}, error=${t?.message}", t)
+                    val errorMsg = when {
+                        t is SocketTimeoutException -> "Превышено время ожидания"
+                        response?.code == 401 -> "Требуется авторизация"
+                        response?.code == 404 -> "Endpoint не найден"
+                        else -> t?.localizedMessage ?: "Ошибка подключения"
+                    }
+                    onError(errorMsg)
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
+            }
+            
+            val eventSource = EventSources.createFactory(streamClient)
+                .newEventSource(request, listener)
+            
+            continuation.invokeOnCancellation {
+                eventSource.cancel()
+            }
+        }
     }
     
     override fun getConversationMessages(conversationId: String): Flow<List<MessageDTO>> {

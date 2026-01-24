@@ -6,7 +6,9 @@ import com.health.companion.data.remote.api.AuthApi
 import com.health.companion.data.remote.api.ChatApi
 import com.health.companion.data.remote.api.DashboardApi
 import com.health.companion.data.remote.api.DocumentApi
+import com.health.companion.data.remote.api.IntelligenceApi
 import com.health.companion.data.remote.api.HealthApi
+import com.health.companion.data.remote.api.PushApi
 import com.health.companion.data.remote.api.ProfileApi
 import com.health.companion.data.remote.api.VoiceApi
 import com.health.companion.utils.TokenManager
@@ -145,4 +147,12 @@ object NetworkModule {
     @Singleton
     @Provides
     fun provideVoiceApi(retrofit: Retrofit): VoiceApi = retrofit.create(VoiceApi::class.java)
+
+    @Singleton
+    @Provides
+    fun provideIntelligenceApi(retrofit: Retrofit): IntelligenceApi = retrofit.create(IntelligenceApi::class.java)
+
+    @Singleton
+    @Provides
+    fun providePushApi(retrofit: Retrofit): PushApi = retrofit.create(PushApi::class.java)
 }

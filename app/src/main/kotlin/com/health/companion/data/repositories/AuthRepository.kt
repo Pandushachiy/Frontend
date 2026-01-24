@@ -31,11 +31,12 @@ class AuthRepositoryImpl @Inject constructor(
             // JSON login request
             val response = authApi.login(LoginRequest(email = email, password = password))
             
-            // Save tokens
+            // Save tokens and email (name will be loaded from register or profile later)
             tokenManager.saveTokens(
                 accessToken = response.access_token,
                 refreshToken = response.refresh_token,
-                userId = email
+                userId = email,
+                userEmail = email
             )
             
             Timber.d("Login successful for: $email")
@@ -77,6 +78,9 @@ class AuthRepositoryImpl @Inject constructor(
             )
             
             Timber.d("Registration successful for: $email")
+            
+            // Save user info for profile display
+            tokenManager.saveUserInfo(name = name, email = email)
             
             // Registration returns user data, need to login to get tokens
             // Or if backend returns tokens, save them here

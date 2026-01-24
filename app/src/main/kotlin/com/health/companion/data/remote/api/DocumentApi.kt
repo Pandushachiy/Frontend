@@ -16,7 +16,7 @@ interface DocumentApi {
      * Upload document - per backend contract just sends file
      */
     @Multipart
-    @POST("documents/upload")
+    @POST("documents/upload/")
     suspend fun uploadDocument(
         @Part file: MultipartBody.Part
     ): DocumentResponse
@@ -27,10 +27,10 @@ interface DocumentApi {
         @Query("limit") limit: Int = 20
     ): DocumentsListResponse
     
-    @GET("documents/{documentId}")
+    @GET("documents/{documentId}/")
     suspend fun getDocument(@Path("documentId") documentId: String): DocumentResponse
     
-    @DELETE("documents/{documentId}")
+    @DELETE("documents/{documentId}/")
     suspend fun deleteDocument(@Path("documentId") documentId: String): DeleteDocumentResponse
 }
 
@@ -44,10 +44,23 @@ data class DocumentResponse(
     val status: String? = null,
     val description: String? = null,
     val summary: String? = null,
-    val extracted_entities: Map<String, String>? = null,
+    val extracted_entities: ExtractedEntities? = null,
     val error_message: String? = null,
     val uploaded_at: String? = null,
     val processed_at: String? = null
+)
+
+@Serializable
+data class ExtractedEntities(
+    val objects: List<String> = emptyList(),
+    val colors: List<String> = emptyList(),
+    val people: List<String> = emptyList(),
+    val is_document: Boolean? = null,
+    val is_photo: Boolean? = null,
+    val mood: String? = null,
+    val ocr_text: String? = null,
+    val kg_entities: List<String> = emptyList(),
+    val kg_relations: Int? = null
 )
 
 @Serializable

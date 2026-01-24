@@ -72,11 +72,11 @@ data class Relation(
 
 @Serializable
 data class RoutingStatsResponse(
-    val totalRequests: Int,
-    val semanticOnly: Int,
-    val aiRouting: Int,
-    val semanticRate: String,
-    val aiRate: String
+    val totalRequests: Int = 0,
+    val semanticOnly: Int = 0,
+    val aiRouting: Int = 0,
+    val semanticRate: String = "0%",
+    val aiRate: String = "0%"
 )
 
 @Serializable

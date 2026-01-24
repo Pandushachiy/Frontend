@@ -58,19 +58,21 @@ class DocumentsViewModel @Inject constructor(
     private fun loadDocuments() {
         viewModelScope.launch {
             try {
+                Timber.d("DocumentsViewModel: Starting to load documents...")
                 _uiState.value = DocumentsUiState.Loading
                 val result = documentRepository.getDocuments()
                 result.onSuccess { docs ->
+                    Timber.d("DocumentsViewModel: Successfully loaded ${docs.size} documents")
                     _documents.value = docs
                     ensureUploadTimes(docs)
                     handlePolling(docs)
                     _uiState.value = DocumentsUiState.Idle
                 }.onFailure { e ->
-                    Timber.e(e, "Failed to load documents")
+                    Timber.e(e, "DocumentsViewModel: Failed to load documents - ${e.message}")
                     _uiState.value = DocumentsUiState.Error(e.message ?: "Failed to load documents")
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Failed to load documents")
+                Timber.e(e, "DocumentsViewModel: Exception loading documents - ${e.message}")
                 _uiState.value = DocumentsUiState.Error(e.message ?: "Failed to load documents")
             }
         }

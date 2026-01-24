@@ -3,6 +3,7 @@ package com.health.companion
 import android.app.Application
 import android.util.Log
 import dagger.hilt.android.HiltAndroidApp
+import com.health.companion.utils.CrashLogger
 import timber.log.Timber
 
 @HiltAndroidApp
@@ -11,6 +12,8 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         
+        CrashLogger.install(this)
+
         // Initialize Timber for logging
         if (BuildConfig.DEBUG_MODE) {
             Timber.plant(Timber.DebugTree())

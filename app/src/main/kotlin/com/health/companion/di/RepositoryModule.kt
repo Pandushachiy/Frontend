@@ -10,20 +10,26 @@ import com.health.companion.data.remote.api.AuthApi
 import com.health.companion.data.remote.api.ChatApi
 import com.health.companion.data.remote.api.DashboardApi
 import com.health.companion.data.remote.api.DocumentApi
+import com.health.companion.data.remote.api.IntelligenceApi
 import com.health.companion.data.remote.api.HealthApi
 import com.health.companion.data.remote.api.ProfileApi
+import com.health.companion.data.remote.api.PushApi
 import com.health.companion.data.repositories.AuthRepository
 import com.health.companion.data.repositories.AuthRepositoryImpl
 import com.health.companion.data.repositories.ChatRepository
 import com.health.companion.data.repositories.ChatRepositoryImpl
 import com.health.companion.data.repositories.DashboardRepository
 import com.health.companion.data.repositories.DashboardRepositoryImpl
+import com.health.companion.data.repositories.IntelligenceRepository
+import com.health.companion.data.repositories.IntelligenceRepositoryImpl
 import com.health.companion.data.repositories.DocumentRepository
 import com.health.companion.data.repositories.DocumentRepositoryImpl
 import com.health.companion.data.repositories.HealthRepository
 import com.health.companion.data.repositories.HealthRepositoryImpl
 import com.health.companion.data.repositories.ProfileRepository
 import com.health.companion.data.repositories.ProfileRepositoryImpl
+import com.health.companion.data.repositories.PushRepository
+import com.health.companion.data.repositories.PushRepositoryImpl
 import com.health.companion.services.WebSocketManager
 import com.health.companion.utils.TokenManager
 import dagger.Module
@@ -50,8 +56,9 @@ object RepositoryModule {
         chatApi: ChatApi,
         chatMessageDao: ChatMessageDao,
         conversationDao: ConversationDao,
-        webSocketManager: WebSocketManager
-    ): ChatRepository = ChatRepositoryImpl(chatApi, chatMessageDao, conversationDao, webSocketManager)
+        webSocketManager: WebSocketManager,
+        tokenManager: TokenManager
+    ): ChatRepository = ChatRepositoryImpl(chatApi, chatMessageDao, conversationDao, webSocketManager, tokenManager)
     
     @Singleton
     @Provides
@@ -80,4 +87,16 @@ object RepositoryModule {
     fun provideDashboardRepository(
         dashboardApi: DashboardApi
     ): DashboardRepository = DashboardRepositoryImpl(dashboardApi)
+
+    @Singleton
+    @Provides
+    fun provideIntelligenceRepository(
+        intelligenceApi: IntelligenceApi
+    ): IntelligenceRepository = IntelligenceRepositoryImpl(intelligenceApi)
+
+    @Singleton
+    @Provides
+    fun providePushRepository(
+        pushApi: PushApi
+    ): PushRepository = PushRepositoryImpl(pushApi)
 }

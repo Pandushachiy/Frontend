@@ -34,6 +34,7 @@ class VoiceInputManager @Inject constructor(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var isDestroyed = false
     
     // Track if we WANT to be listening (user intent)
     private var wantToListen = false
@@ -208,9 +209,15 @@ class VoiceInputManager @Inject constructor(
     }
     
     private fun createRecognizer() {
+        if (isDestroyed) return
         speechRecognizer?.destroy()
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
-            setRecognitionListener(recognitionListener)
+        try {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+                setRecognitionListener(recognitionListener)
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Voice: Failed to create SpeechRecognizer")
+            speechRecognizer = null
         }
     }
 
@@ -219,6 +226,7 @@ class VoiceInputManager @Inject constructor(
         promptText: String = "Говорите..."
     ) {
         Timber.d("Voice: startListening called, current wantToListen=$wantToListen")
+        if (isDestroyed) return
         currentLanguage = language
         currentPromptText = promptText
         wantToListen = true
@@ -238,6 +246,11 @@ class VoiceInputManager @Inject constructor(
     private fun doStartListening() {
         if (!wantToListen) {
             _isListening.value = false
+            return
+        }
+        if (isDestroyed) {
+            _isListening.value = false
+            wantToListen = false
             return
         }
         
@@ -319,6 +332,7 @@ class VoiceInputManager @Inject constructor(
 
     fun destroy() {
         wantToListen = false
+        isDestroyed = true
         mainHandler.post {
             try {
                 speechRecognizer?.destroy()

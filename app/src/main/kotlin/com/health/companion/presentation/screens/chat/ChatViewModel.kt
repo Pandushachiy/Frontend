@@ -13,6 +13,7 @@ import com.health.companion.data.repositories.DocumentRepository
 import com.health.companion.data.repositories.VoiceRepository
 import com.health.companion.ml.voice.VoiceInputManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -82,6 +83,16 @@ class ChatViewModel @Inject constructor(
     
     private val _uploadedFiles = MutableStateFlow<List<String>>(emptyList())
     val uploadedFiles: StateFlow<List<String>> = _uploadedFiles.asStateFlow()
+    
+    // Streaming state
+    private val _streamingResponse = MutableStateFlow("")
+    val streamingResponse: StateFlow<String> = _streamingResponse.asStateFlow()
+    
+    private val _streamStatus = MutableStateFlow("")
+    val streamStatus: StateFlow<String> = _streamStatus.asStateFlow()
+    
+    private val _isStreaming = MutableStateFlow(false)
+    val isStreaming: StateFlow<Boolean> = _isStreaming.asStateFlow()
 
     private val _conversations = MutableStateFlow<List<ConversationEntity>>(emptyList())
     val conversations: StateFlow<List<ConversationEntity>> = _conversations.asStateFlow()
@@ -111,7 +122,10 @@ class ChatViewModel @Inject constructor(
                 }
                 .catch { e -> Timber.e(e, "Failed to load messages") }
                 .collect { messagesList ->
-                    _messages.value = messagesList
+                    // Don't overwrite messages during streaming
+                    if (!_isStreaming.value) {
+                        _messages.value = messagesList
+                    }
                 }
         }
     }
@@ -169,11 +183,16 @@ class ChatViewModel @Inject constructor(
     }
 
     fun sendMessage(text: String) {
+        android.util.Log.d("CHAT_DEBUG", "sendMessage called: $text")
         if (text.isBlank()) return
 
         viewModelScope.launch {
             try {
+                android.util.Log.d("CHAT_DEBUG", "Starting stream...")
                 _isLoading.value = true
+                _isStreaming.value = true
+                _streamingResponse.value = ""
+                _streamStatus.value = "thinking"
 
                 // Add user message immediately
                 val userMessageId = UUID.randomUUID().toString()
@@ -191,32 +210,96 @@ class ChatViewModel @Inject constructor(
                 updateMessageStatus(userMessageId, MessageSendStatus.Sending)
                 _currentMessage.value = ""
 
-                val result = chatRepository.sendMessage(text, _currentConversationId.value)
+                // Streaming message state
+                val streamingMessageId = UUID.randomUUID().toString()
+                val contentBuilder = StringBuilder()
+                var messageAdded = false
                 
-                result.onSuccess { response ->
-                    if (_currentConversationId.value == null) {
-                        _currentConversationId.value = response.getConversationId()
-                        savedStateHandle["conversationId"] = response.getConversationId()
+                // SSE streaming - just accumulate text, animation is in Composable
+                chatRepository.sendMessageStream(
+                    message = text,
+                    conversationId = _currentConversationId.value,
+                    onStatus = { status ->
+                        viewModelScope.launch(Dispatchers.Main.immediate) {
+                            _streamStatus.value = status
+                        }
+                    },
+                    onToken = { token ->
+                        contentBuilder.append(token)
+                        val currentContent = contentBuilder.toString()
+                        android.util.Log.d("TYPEWRITER", "Token received, total len=${currentContent.length}")
+                        
+                        viewModelScope.launch(Dispatchers.Main.immediate) {
+                            if (!messageAdded) {
+                                messageAdded = true
+                                _isLoading.value = false
+                                // Add message with special flag for animation
+                                val msg = MessageDTO(
+                                    id = streamingMessageId,
+                                    content = currentContent,
+                                    role = "assistant",
+                                    agent_name = "streaming", // Flag for animation
+                                    provider = null,
+                                    provider_color = null,
+                                    model_used = null,
+                                    created_at = System.currentTimeMillis().toString()
+                                )
+                                _messages.value = _messages.value + msg
+                            } else {
+                                // Update content - Composable will animate
+                                _messages.value = _messages.value.map { m ->
+                                    if (m.id == streamingMessageId) m.copy(content = currentContent) else m
+                                }
+                            }
+                        }
+                    },
+                    onDone = { messageId, content, newConversationId ->
+                        val finalContent = content.ifEmpty { contentBuilder.toString() }
+                        
+                        viewModelScope.launch(Dispatchers.Main) {
+                            // Update conversation ID
+                            if (_currentConversationId.value == null && newConversationId != null) {
+                                _currentConversationId.value = newConversationId
+                                savedStateHandle["conversationId"] = newConversationId
+                            }
+                            
+                            // Update content but KEEP streaming flag for animation
+                            _messages.value = _messages.value.map { m ->
+                                if (m.id == streamingMessageId) m.copy(content = finalContent) else m
+                            }
+                            
+                            updateMessageStatus(userMessageId, MessageSendStatus.Sent)
+                            _streamStatus.value = ""
+                            
+                            // Wait for animation to complete (approx 30ms per 2 chars)
+                            val animationTime = (finalContent.length / 2) * 30L + 500L
+                            kotlinx.coroutines.delay(animationTime)
+                            
+                            // NOW remove streaming flag
+                            _messages.value = _messages.value.map { m ->
+                                if (m.id == streamingMessageId) m.copy(agent_name = null) else m
+                            }
+                            
+                            _isStreaming.value = false
+                        }
+                    },
+                    onError = { errorMsg ->
+                        // Ignore "Socket closed" after message was added
+                        if (messageAdded && errorMsg.contains("Socket closed", ignoreCase = true)) {
+                            return@sendMessageStream
+                        }
+                        
+                        viewModelScope.launch(Dispatchers.Main.immediate) {
+                            // Remove streaming message if exists
+                            _messages.value = _messages.value.filterNot { it.id == streamingMessageId }
+                            updateMessageStatus(userMessageId, MessageSendStatus.Failed)
+                            _uiState.value = ChatUiState.Error(errorMsg)
+                            _streamStatus.value = ""
+                            _isStreaming.value = false
+                            _isLoading.value = false
+                        }
                     }
-
-                    val assistantMessage = MessageDTO(
-                        id = response.getMessageId().ifEmpty { java.util.UUID.randomUUID().toString() },
-                        content = response.getMessageContent(),
-                        role = response.message?.role ?: "assistant",
-                        agent_name = response.getAgentName(),
-                        provider = response.getProviderResolved(),
-                        provider_color = response.getProviderColorResolved(),
-                        model_used = response.getModelUsedResolved(),
-                        created_at = response.getCreatedAt()
-                    )
-                    upsertMessage(assistantMessage)
-                    updateMessageStatus(userMessageId, MessageSendStatus.Sent)
-                    
-                }.onFailure { e ->
-                    Timber.e(e, "Failed to send message")
-                    updateMessageStatus(userMessageId, MessageSendStatus.Failed)
-                    _uiState.value = ChatUiState.Error(e.message ?: "Ошибка отправки")
-                }
+                )
 
             } catch (e: Exception) {
                 Timber.e(e, "Failed to send message")
@@ -225,7 +308,8 @@ class ChatViewModel @Inject constructor(
                     if (lastUser != null) put(lastUser.id, MessageSendStatus.Failed)
                 }
                 _uiState.value = ChatUiState.Error(e.message ?: "Ошибка")
-            } finally {
+                _streamStatus.value = ""
+                _isStreaming.value = false
                 _isLoading.value = false
             }
         }
