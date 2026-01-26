@@ -109,18 +109,25 @@ data class MessageMetadata(
 data class ConversationDTO(
     val id: String,
     val title: String,
-    val created_at: String
+    val created_at: String,
+    val updated_at: String? = null,
+    val is_archived: Boolean = false,
+    val is_pinned: Boolean = false,
+    val summary: String? = null
 )
 
 @Serializable
 data class MessageDTO(
     val id: String,
+    val conversation_id: String? = null,
     val content: String,
     val role: String,
     val agent_name: String? = null,
     val provider: String? = null,
     val provider_color: String? = null,
     val model_used: String? = null,
+    val tokens_used: Int? = null,
+    val processing_time: Int? = null,
     val created_at: String
 )
 

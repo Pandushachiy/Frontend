@@ -66,6 +66,7 @@ interface ChatRepository {
     suspend fun deleteConversation(conversationId: String): Result<Unit>
     fun connectWebSocket(userId: String): Flow<WebSocketMessage>
     suspend fun disconnectWebSocket()
+    suspend fun clearAllLocalData()
 }
 
 class ChatRepositoryImpl @Inject constructor(
@@ -73,10 +74,12 @@ class ChatRepositoryImpl @Inject constructor(
     private val chatMessageDao: ChatMessageDao,
     private val conversationDao: ConversationDao,
     private val webSocketManager: WebSocketManager,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val okHttpClient: OkHttpClient // Injected client with TokenAuthenticator
 ) : ChatRepository {
     
-    private val streamClient = OkHttpClient.Builder()
+    // Use injected client but with longer timeouts for SSE streaming
+    private val streamClient = okHttpClient.newBuilder()
         .readTimeout(120, TimeUnit.SECONDS)
         .connectTimeout(30, TimeUnit.SECONDS)
         .build()
@@ -377,18 +380,33 @@ class ChatRepositoryImpl @Inject constructor(
         return try {
             val response = chatApi.getConversations()
             val now = System.currentTimeMillis()
+            val serverIds = response.items.map { it.id }.toSet()
+            
+            // Get current local IDs
+            val localIds = conversationDao.getAllConversations().map { it.id }.toSet()
+            
+            // Delete local conversations that don't exist on server
+            val toDelete = localIds - serverIds
+            toDelete.forEach { id -> conversationDao.deleteById(id) }
+            
+            // Upsert server conversations
             response.items.forEach { dto ->
                 conversationDao.insert(
                     ConversationEntity(
                         id = dto.id,
                         title = dto.title.ifBlank { "Новый чат" },
                         createdAt = now,
-                        updatedAt = now
+                        updatedAt = now,
+                        isArchived = dto.is_archived,
+                        isPinned = dto.is_pinned,
+                        summary = dto.summary
                     )
                 )
             }
+            Timber.d("Synced ${response.items.size} conversations, removed ${toDelete.size} stale")
             Result.success(response.items)
         } catch (e: Exception) {
+            Timber.e(e, "Failed to get conversations from server")
             Result.failure(e)
         }
     }
@@ -484,6 +502,12 @@ class ChatRepositoryImpl @Inject constructor(
     
     override suspend fun disconnectWebSocket() {
         webSocketManager.disconnect()
+    }
+    
+    override suspend fun clearAllLocalData() {
+        chatMessageDao.deleteAll()
+        conversationDao.deleteAll()
+        Timber.d("All local chat data cleared")
     }
     
     private suspend fun ensureConversationExists(conversationId: String, title: String? = null) {

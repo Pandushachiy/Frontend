@@ -32,6 +32,7 @@ import com.health.companion.data.repositories.PushRepository
 import com.health.companion.data.repositories.PushRepositoryImpl
 import com.health.companion.services.WebSocketManager
 import com.health.companion.utils.TokenManager
+import okhttp3.OkHttpClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -57,8 +58,9 @@ object RepositoryModule {
         chatMessageDao: ChatMessageDao,
         conversationDao: ConversationDao,
         webSocketManager: WebSocketManager,
-        tokenManager: TokenManager
-    ): ChatRepository = ChatRepositoryImpl(chatApi, chatMessageDao, conversationDao, webSocketManager, tokenManager)
+        tokenManager: TokenManager,
+        okHttpClient: OkHttpClient
+    ): ChatRepository = ChatRepositoryImpl(chatApi, chatMessageDao, conversationDao, webSocketManager, tokenManager, okHttpClient)
     
     @Singleton
     @Provides

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.health.companion.data.repositories.AuthRepository
+import com.health.companion.data.repositories.ChatRepository
 import com.health.companion.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,6 +18,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val chatRepository: ChatRepository,
     private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -55,11 +57,18 @@ class SettingsViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             try {
+                // Clear local chat data first
+                chatRepository.clearAllLocalData()
+                chatRepository.disconnectWebSocket()
+                
+                // Then logout from server
                 authRepository.logout()
                 tokenManager.clearTokens()
-                Timber.d("User logged out")
+                Timber.d("User logged out, local data cleared")
             } catch (e: Exception) {
                 Timber.e(e, "Logout failed")
+                // Still clear tokens and local data on error
+                try { chatRepository.clearAllLocalData() } catch (_: Exception) {}
                 tokenManager.clearTokens()
             }
         }

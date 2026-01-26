@@ -12,7 +12,10 @@ data class ConversationEntity(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isArchived: Boolean = false,
+    val isPinned: Boolean = false,
+    val summary: String? = null
 )
 
 @Entity(
@@ -39,6 +42,8 @@ data class ChatMessageEntity(
     val provider: String? = null,
     val providerColor: String? = null,
     val modelUsed: String? = null,
+    val tokensUsed: Int? = null,
+    val processingTime: Int? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 

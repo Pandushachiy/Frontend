@@ -115,18 +115,34 @@ class ChatViewModel @Inject constructor(
 
     private fun observeCurrentConversationMessages() {
         viewModelScope.launch {
-            _currentConversationId
-                .filterNotNull()
-                .flatMapLatest { convId ->
-                    chatRepository.getConversationMessages(convId)
-                }
-                .catch { e -> Timber.e(e, "Failed to load messages") }
-                .collect { messagesList ->
-                    // Don't overwrite messages during streaming
-                    if (!_isStreaming.value) {
-                        _messages.value = messagesList
+            var currentJob: kotlinx.coroutines.Job? = null
+            
+            _currentConversationId.collect { convId ->
+                // Cancel previous collection
+                currentJob?.cancel()
+                
+                if (convId != null) {
+                    // Start new collection for this conversation
+                    currentJob = viewModelScope.launch {
+                        chatRepository.getConversationMessages(convId)
+                            .catch { e -> Timber.e(e, "Failed to load messages") }
+                            .collect { messagesList ->
+                                // Only update if this is still the current conversation
+                                // AND not during streaming
+                                // AND Room has at least as many messages as memory (don't lose messages)
+                                if (_currentConversationId.value == convId && !_isStreaming.value) {
+                                    val currentMessages = _messages.value
+                                    // Only update from Room if it has more/equal messages
+                                    // This prevents overwriting in-memory messages before Room sync completes
+                                    if (messagesList.size >= currentMessages.size || currentMessages.isEmpty()) {
+                                        _messages.value = messagesList
+                                    }
+                                }
+                            }
                     }
                 }
+                // Don't clear messages when convId is null - keep showing previous
+            }
         }
     }
 
@@ -136,10 +152,7 @@ class ChatViewModel @Inject constructor(
                 .catch { e -> Timber.e(e, "Failed to observe conversations") }
                 .collect { list ->
                     _conversations.value = list
-                    // Auto-select first conversation if none selected
-                    if (_currentConversationId.value == null && list.isNotEmpty()) {
-                        _currentConversationId.value = list.first().id
-                    }
+                    // Don't auto-select - let user choose or start new chat
                 }
         }
     }
@@ -225,14 +238,16 @@ class ChatViewModel @Inject constructor(
                         }
                     },
                     onToken = { token ->
+                        val tokenTime = System.currentTimeMillis()
                         contentBuilder.append(token)
                         val currentContent = contentBuilder.toString()
-                        android.util.Log.d("TYPEWRITER", "Token received, total len=${currentContent.length}")
+                        android.util.Log.d("STREAM_DIAG", "⚡ TOKEN @$tokenTime len=${currentContent.length} chunk='${token.take(20)}'")
                         
                         viewModelScope.launch(Dispatchers.Main.immediate) {
                             if (!messageAdded) {
                                 messageAdded = true
                                 _isLoading.value = false
+                                android.util.Log.d("STREAM_DIAG", "📦 FIRST MSG ADD @${System.currentTimeMillis()} len=${currentContent.length}")
                                 // Add message with special flag for animation
                                 val msg = MessageDTO(
                                     id = streamingMessageId,
@@ -257,10 +272,14 @@ class ChatViewModel @Inject constructor(
                         val finalContent = content.ifEmpty { contentBuilder.toString() }
                         
                         viewModelScope.launch(Dispatchers.Main) {
-                            // Update conversation ID
-                            if (_currentConversationId.value == null && newConversationId != null) {
-                                _currentConversationId.value = newConversationId
-                                savedStateHandle["conversationId"] = newConversationId
+                            // Update conversation ID from server (this is the authoritative ID)
+                            if (newConversationId != null && newConversationId.isNotBlank()) {
+                                val oldId = _currentConversationId.value
+                                if (oldId != newConversationId) {
+                                    Timber.d("Server assigned conversation_id: $newConversationId (was: $oldId)")
+                                    _currentConversationId.value = newConversationId
+                                    savedStateHandle["conversationId"] = newConversationId
+                                }
                             }
                             
                             // Update content but KEEP streaming flag for animation
@@ -281,6 +300,9 @@ class ChatViewModel @Inject constructor(
                             }
                             
                             _isStreaming.value = false
+                            
+                            // Refresh conversations list to show new one
+                            refreshConversations()
                         }
                     },
                     onError = { errorMsg ->
@@ -290,6 +312,27 @@ class ChatViewModel @Inject constructor(
                         }
                         
                         viewModelScope.launch(Dispatchers.Main.immediate) {
+                            // Handle "Conversation not found" - retry without conversation_id
+                            if (errorMsg.contains("not found", ignoreCase = true) || errorMsg.contains("404")) {
+                                Timber.w("Conversation not found, clearing and retrying...")
+                                // Clear stale conversation
+                                _currentConversationId.value?.let { staleId ->
+                                    chatRepository.deleteLocalConversation(staleId)
+                                }
+                                _currentConversationId.value = null
+                                savedStateHandle["conversationId"] = null
+                                
+                                // Retry message without conversation_id
+                                _messages.value = _messages.value.filterNot { it.id == streamingMessageId }
+                                _streamStatus.value = ""
+                                _isStreaming.value = false
+                                _isLoading.value = false
+                                
+                                // Retry
+                                sendMessage(text)
+                                return@launch
+                            }
+                            
                             // Remove streaming message if exists
                             _messages.value = _messages.value.filterNot { it.id == streamingMessageId }
                             updateMessageStatus(userMessageId, MessageSendStatus.Failed)
@@ -322,38 +365,36 @@ class ChatViewModel @Inject constructor(
     }
 
     fun createNewConversation() {
-        viewModelScope.launch {
-            _messages.value = emptyList()
-            _currentMessage.value = ""
-            val result = chatRepository.createConversation()
-            result.onSuccess { dto ->
-                _currentConversationId.value = dto.id
-                savedStateHandle["conversationId"] = dto.id
-            }.onFailure { e ->
-                Timber.e(e, "Failed to create conversation")
-                val local = chatRepository.createLocalConversation()
-                local.onSuccess { id ->
-                    _currentConversationId.value = id
-                    savedStateHandle["conversationId"] = id
-                }.onFailure {
-                    _uiState.value = ChatUiState.Error("Не удалось создать чат")
-                }
-            }
-        }
+        // Don't create conversation on backend yet - it will be created with first message
+        // Just clear current state for new chat
+        _messages.value = emptyList()
+        _currentMessage.value = ""
+        _currentConversationId.value = null
+        savedStateHandle["conversationId"] = null
+        _uiState.value = ChatUiState.Success
+        Timber.d("New conversation started (will be created on first message)")
     }
 
     fun selectConversation(conversationId: String) {
+        if (_currentConversationId.value == conversationId) return
+        
+        _uiState.value = ChatUiState.Success // Clear any errors
+        
+        // Update ID immediately - Flow will load messages smoothly
+        _currentConversationId.value = conversationId
+        savedStateHandle["conversationId"] = conversationId
+        
+        // Sync from server in background (UI already updated via Flow)
         viewModelScope.launch {
-            if (_currentConversationId.value == conversationId) return@launch
-            _messages.value = emptyList()
-            _currentConversationId.value = conversationId
-            savedStateHandle["conversationId"] = conversationId
-            _isSyncing.value = true
-            chatRepository.syncConversationMessages(conversationId)
-                .onFailure { e ->
-                    Timber.e(e, "Failed to sync messages")
+            val result = chatRepository.syncConversationMessages(conversationId)
+            result.onFailure { e -> 
+                Timber.e(e, "Failed to sync messages for $conversationId")
+                if (e.message?.contains("404") == true || e.message?.contains("not found", ignoreCase = true) == true) {
+                    chatRepository.deleteLocalConversation(conversationId)
+                    _currentConversationId.value = null
+                    _uiState.value = ChatUiState.Error("Сессия не найдена")
                 }
-                .also { _isSyncing.value = false }
+            }
         }
     }
     
