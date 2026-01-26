@@ -2,9 +2,7 @@ package com.health.companion.presentation.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.health.companion.data.remote.api.KnowledgeGraphResponse
 import com.health.companion.data.remote.api.ProfileResponse
-import com.health.companion.data.remote.api.RoutingStatsResponse
 import com.health.companion.data.repositories.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,9 +17,7 @@ data class ProfileUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val profile: ProfileResponse? = null,
-    val knowledgeGraph: KnowledgeGraphResponse? = null,
-    val routingStats: RoutingStatsResponse? = null,
-    val deletingKey: String? = null
+    val deletingId: String? = null
 )
 
 @HiltViewModel
@@ -33,55 +29,67 @@ class ProfileViewModel @Inject constructor(
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     init {
-        refreshAll()
+        loadProfile()
     }
 
-    fun refreshAll(entityType: String? = null, limit: Int? = 50) {
+    fun loadProfile(forceRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            // Сначала покажем кэш (если есть)
+            val cached = profileRepository.getCachedProfile()
+            if (cached != null && !forceRefresh) {
+                _uiState.update { it.copy(profile = cached, isLoading = false) }
+            } else {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+            }
 
-            val profileResult = profileRepository.getProfile()
-            profileResult.onSuccess { profile ->
-                _uiState.update { it.copy(profile = profile) }
+            // Потом загрузим свежие данные
+            val result = profileRepository.getProfile()
+            result.onSuccess { profile ->
+                _uiState.update { it.copy(profile = profile, isLoading = false, error = null) }
             }.onFailure { e ->
+                // Если есть кэш - не показываем ошибку
+                if (_uiState.value.profile == null) {
+                    _uiState.update { it.copy(error = e.message, isLoading = false) }
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
                 Timber.e(e, "Profile load failed")
-                _uiState.update { it.copy(error = e.message ?: "Ошибка загрузки профиля") }
             }
-
-            val graphResult = profileRepository.getKnowledgeGraph(entityType, limit)
-            graphResult.onSuccess { graph ->
-                _uiState.update { it.copy(knowledgeGraph = graph) }
-            }.onFailure { e ->
-                Timber.e(e, "Graph load failed")
-                _uiState.update { it.copy(error = e.message ?: "Ошибка загрузки графа знаний") }
-            }
-
-            val statsResult = profileRepository.getRoutingStats()
-            statsResult.onSuccess { stats ->
-                _uiState.update { it.copy(routingStats = stats) }
-            }.onFailure { e ->
-                Timber.e(e, "Routing stats load failed")
-                _uiState.update { it.copy(error = e.message ?: "Ошибка загрузки статистики") }
-            }
-
-            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
-    fun deleteMemory(key: String) {
+    fun refresh() = loadProfile(forceRefresh = true)
+
+    fun deleteFact(id: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(deletingKey = key, error = null) }
-            val result = profileRepository.deleteMemory(key)
+            _uiState.update { it.copy(deletingId = id, error = null) }
+            val result = profileRepository.deleteFact(id)
             result.onSuccess {
                 _uiState.update { state ->
                     val updated = state.profile?.copy(
-                        memories = state.profile.memories.filterNot { it.key == key }
+                        facts = state.profile.facts.filterNot { it.id == id }
                     )
-                    state.copy(profile = updated, deletingKey = null)
+                    state.copy(profile = updated, deletingId = null)
                 }
             }.onFailure { e ->
-                Timber.e(e, "Delete memory failed")
-                _uiState.update { it.copy(deletingKey = null, error = e.message ?: "Ошибка удаления памяти") }
+                Timber.e(e, "Delete fact failed")
+                _uiState.update { it.copy(deletingId = null, error = e.message) }
+            }
+        }
+    }
+
+    fun clearAllFacts() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val result = profileRepository.clearAllFacts()
+            result.onSuccess {
+                _uiState.update { state ->
+                    val updated = state.profile?.copy(facts = emptyList())
+                    state.copy(profile = updated, isLoading = false)
+                }
+            }.onFailure { e ->
+                Timber.e(e, "Clear facts failed")
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }

@@ -15,6 +15,7 @@ import com.health.companion.data.local.database.ChatMessageEntity;
 import java.lang.Class;
 import java.lang.Exception;
 import java.lang.Float;
+import java.lang.Integer;
 import java.lang.Object;
 import java.lang.Override;
 import java.lang.String;
@@ -39,13 +40,15 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
 
   private final SharedSQLiteStatement __preparedStmtOfDeleteById;
 
+  private final SharedSQLiteStatement __preparedStmtOfDeleteAll;
+
   public ChatMessageDao_Impl(@NonNull final RoomDatabase __db) {
     this.__db = __db;
     this.__insertionAdapterOfChatMessageEntity = new EntityInsertionAdapter<ChatMessageEntity>(__db) {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `chat_messages` (`id`,`conversationId`,`content`,`role`,`agentName`,`confidence`,`sources`,`provider`,`providerColor`,`modelUsed`,`createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `chat_messages` (`id`,`conversationId`,`content`,`role`,`agentName`,`confidence`,`sources`,`provider`,`providerColor`,`modelUsed`,`tokensUsed`,`processingTime`,`createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -85,7 +88,17 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
         } else {
           statement.bindString(10, entity.getModelUsed());
         }
-        statement.bindLong(11, entity.getCreatedAt());
+        if (entity.getTokensUsed() == null) {
+          statement.bindNull(11);
+        } else {
+          statement.bindLong(11, entity.getTokensUsed());
+        }
+        if (entity.getProcessingTime() == null) {
+          statement.bindNull(12);
+        } else {
+          statement.bindLong(12, entity.getProcessingTime());
+        }
+        statement.bindLong(13, entity.getCreatedAt());
       }
     };
     this.__preparedStmtOfDeleteByConversation = new SharedSQLiteStatement(__db) {
@@ -101,6 +114,14 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
       @NonNull
       public String createQuery() {
         final String _query = "DELETE FROM chat_messages WHERE id = ?";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfDeleteAll = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "DELETE FROM chat_messages";
         return _query;
       }
     };
@@ -196,6 +217,29 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
   }
 
   @Override
+  public Object deleteAll(final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteAll.acquire();
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfDeleteAll.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Flow<List<ChatMessageEntity>> getMessagesFlow(final String conversationId) {
     final String _sql = "SELECT * FROM chat_messages WHERE conversationId = ? ORDER BY createdAt ASC";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
@@ -217,6 +261,8 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
           final int _cursorIndexOfProvider = CursorUtil.getColumnIndexOrThrow(_cursor, "provider");
           final int _cursorIndexOfProviderColor = CursorUtil.getColumnIndexOrThrow(_cursor, "providerColor");
           final int _cursorIndexOfModelUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "modelUsed");
+          final int _cursorIndexOfTokensUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "tokensUsed");
+          final int _cursorIndexOfProcessingTime = CursorUtil.getColumnIndexOrThrow(_cursor, "processingTime");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final List<ChatMessageEntity> _result = new ArrayList<ChatMessageEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
@@ -265,9 +311,21 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
             } else {
               _tmpModelUsed = _cursor.getString(_cursorIndexOfModelUsed);
             }
+            final Integer _tmpTokensUsed;
+            if (_cursor.isNull(_cursorIndexOfTokensUsed)) {
+              _tmpTokensUsed = null;
+            } else {
+              _tmpTokensUsed = _cursor.getInt(_cursorIndexOfTokensUsed);
+            }
+            final Integer _tmpProcessingTime;
+            if (_cursor.isNull(_cursorIndexOfProcessingTime)) {
+              _tmpProcessingTime = null;
+            } else {
+              _tmpProcessingTime = _cursor.getInt(_cursorIndexOfProcessingTime);
+            }
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
-            _item = new ChatMessageEntity(_tmpId,_tmpConversationId,_tmpContent,_tmpRole,_tmpAgentName,_tmpConfidence,_tmpSources,_tmpProvider,_tmpProviderColor,_tmpModelUsed,_tmpCreatedAt);
+            _item = new ChatMessageEntity(_tmpId,_tmpConversationId,_tmpContent,_tmpRole,_tmpAgentName,_tmpConfidence,_tmpSources,_tmpProvider,_tmpProviderColor,_tmpModelUsed,_tmpTokensUsed,_tmpProcessingTime,_tmpCreatedAt);
             _result.add(_item);
           }
           return _result;
@@ -307,6 +365,8 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
           final int _cursorIndexOfProvider = CursorUtil.getColumnIndexOrThrow(_cursor, "provider");
           final int _cursorIndexOfProviderColor = CursorUtil.getColumnIndexOrThrow(_cursor, "providerColor");
           final int _cursorIndexOfModelUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "modelUsed");
+          final int _cursorIndexOfTokensUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "tokensUsed");
+          final int _cursorIndexOfProcessingTime = CursorUtil.getColumnIndexOrThrow(_cursor, "processingTime");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final List<ChatMessageEntity> _result = new ArrayList<ChatMessageEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
@@ -355,9 +415,21 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
             } else {
               _tmpModelUsed = _cursor.getString(_cursorIndexOfModelUsed);
             }
+            final Integer _tmpTokensUsed;
+            if (_cursor.isNull(_cursorIndexOfTokensUsed)) {
+              _tmpTokensUsed = null;
+            } else {
+              _tmpTokensUsed = _cursor.getInt(_cursorIndexOfTokensUsed);
+            }
+            final Integer _tmpProcessingTime;
+            if (_cursor.isNull(_cursorIndexOfProcessingTime)) {
+              _tmpProcessingTime = null;
+            } else {
+              _tmpProcessingTime = _cursor.getInt(_cursorIndexOfProcessingTime);
+            }
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
-            _item = new ChatMessageEntity(_tmpId,_tmpConversationId,_tmpContent,_tmpRole,_tmpAgentName,_tmpConfidence,_tmpSources,_tmpProvider,_tmpProviderColor,_tmpModelUsed,_tmpCreatedAt);
+            _item = new ChatMessageEntity(_tmpId,_tmpConversationId,_tmpContent,_tmpRole,_tmpAgentName,_tmpConfidence,_tmpSources,_tmpProvider,_tmpProviderColor,_tmpModelUsed,_tmpTokensUsed,_tmpProcessingTime,_tmpCreatedAt);
             _result.add(_item);
           }
           return _result;

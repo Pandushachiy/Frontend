@@ -3,8 +3,10 @@ package com.health.companion.presentation.screens.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.health.companion.data.remote.api.EmotionalStateResponse
+import com.health.companion.data.remote.api.FactAboutMe
 import com.health.companion.data.remote.api.MemorySummaryResponse
-import com.health.companion.data.remote.api.Widget
+import com.health.companion.data.remote.api.QuickAction
+import com.health.companion.data.remote.api.StreakInfo
 import com.health.companion.data.repositories.DashboardRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -32,16 +34,26 @@ class DashboardViewModel @Inject constructor(
     private val _navigationEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val navigationEvent = _navigationEvent.asSharedFlow()
 
-    // Виджеты которые нужно скрыть
-    private val hiddenWidgetTypes = setOf("recent_documents", "quick_actions")
-
-    // Auto-refresh
     private var refreshJob: Job? = null
-    private var lastRefreshTime = 0L
-    private val THROTTLE_MS = 10_000L // минимум 10 сек между запросами
-    private val AUTO_REFRESH_INTERVAL = 60_000L // каждые 60 сек
 
     init {
+        // Сначала покажем кэш мгновенно (без isLoading)
+        dashboardRepository.getCachedDashboard()?.let { cached ->
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    greeting = cached.greeting,
+                    insight = cached.insight,
+                    messagesThisWeek = cached.messagesThisWeek,
+                    streak = cached.streak,
+                    factAboutMe = cached.factAboutMe,
+                    quickActions = cached.quickActions,
+                    lastUpdated = cached.lastUpdated
+                )
+            }
+            Timber.d("Dashboard init: showing cached data")
+        }
+        // Потом загрузим свежее в фоне
         loadDashboard()
     }
 
@@ -50,18 +62,12 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun loadDashboard(force: Boolean = false) {
-        val now = System.currentTimeMillis()
-        // Throttle: минимум 10 сек между запросами (если не force)
-        if (!force && now - lastRefreshTime < THROTTLE_MS) {
-            Timber.d("Dashboard load throttled")
-            return
-        }
-        lastRefreshTime = now
-
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            // Показываем loading только если нет данных
+            if (_state.value.greeting.isEmpty()) {
+                _state.update { it.copy(isLoading = true, error = null) }
+            }
 
-            // Загружаем все данные параллельно
             val dashboardDeferred = async { dashboardRepository.getDashboard() }
             val emotionalStateDeferred = async { dashboardRepository.getEmotionalState() }
             val memorySummaryDeferred = async { dashboardRepository.getMemorySummary() }
@@ -72,83 +78,84 @@ class DashboardViewModel @Inject constructor(
 
             dashboardResult
                 .onSuccess { dashboard ->
-                    // Фильтруем виджеты - убираем документы и быстрые действия
-                    val filteredWidgets = dashboard.widgets.filter { widget ->
-                        widget.type !in hiddenWidgetTypes
-                    }
-
                     _state.update {
                         it.copy(
                             isLoading = false,
                             greeting = dashboard.greeting,
-                            moodEmoji = dashboard.moodEmoji,
-                            overallStatus = dashboard.overallStatus,
-                            widgets = filteredWidgets,
+                            insight = dashboard.insight,
+                            messagesThisWeek = dashboard.messagesThisWeek,
+                            streak = dashboard.streak,
+                            factAboutMe = dashboard.factAboutMe,
+                            quickActions = dashboard.quickActions,
+                            lastUpdated = dashboard.lastUpdated,
                             emotionalState = emotionalState,
                             memorySummary = memorySummary,
                             error = null
                         )
                     }
-                    Timber.d("Dashboard loaded: ${filteredWidgets.size} widgets, emotional: $emotionalState")
+                    Timber.d("Dashboard loaded: streak=${dashboard.streak.days}")
                 }
                 .onFailure { error ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error.message ?: "Не удалось загрузить дашборд"
-                        )
+                    // Не показываем ошибку если есть данные
+                    if (_state.value.greeting.isEmpty()) {
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                error = error.message ?: "Не удалось загрузить"
+                            )
+                        }
+                    } else {
+                        _state.update { it.copy(isLoading = false) }
                     }
                     Timber.e(error, "Dashboard load failed")
                 }
         }
     }
 
-    /**
-     * Запуск автообновления (вызывать при входе на экран)
-     */
     fun startAutoRefresh() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             while (isActive) {
-                delay(AUTO_REFRESH_INTERVAL)
+                delay(60_000L)
                 loadDashboard()
             }
         }
-        Timber.d("Dashboard auto-refresh started")
     }
 
-    /**
-     * Остановка автообновления (вызывать при уходе с экрана)
-     */
     fun stopAutoRefresh() {
         refreshJob?.cancel()
         refreshJob = null
-        Timber.d("Dashboard auto-refresh stopped")
     }
 
-    /**
-     * После отправки сообщения в чате — обновить dashboard с задержкой
-     * (чтобы бэкенд успел проанализировать эмоции)
-     */
     fun onMessageSent() {
         viewModelScope.launch {
-            delay(2000) // подождать анализ эмоций
+            delay(2000)
             loadDashboard(force = true)
-            Timber.d("Dashboard refreshed after message sent")
         }
     }
 
     fun navigate(route: String) {
         _navigationEvent.tryEmit(route)
     }
+
+    fun onQuickAction(action: QuickAction) {
+        when (action.action) {
+            "continue_chat", "new_chat" -> navigate("chat")
+            "view_docs" -> navigate("documents")
+            else -> navigate(action.action)
+        }
+    }
 }
 
 data class DashboardState(
     val isLoading: Boolean = true,
     val greeting: String = "",
-    val moodEmoji: String = "😊",
-    val overallStatus: String = "neutral",
-    val widgets: List<Widget> = emptyList(),
+    val insight: String = "",
+    val messagesThisWeek: Int = 0,
+    val streak: StreakInfo = StreakInfo(),
+    val factAboutMe: FactAboutMe? = null,
+    val quickActions: List<QuickAction> = emptyList(),
+    val lastUpdated: String = "",
     val emotionalState: EmotionalStateResponse? = null,
     val memorySummary: MemorySummaryResponse? = null,
     val error: String? = null

@@ -21,28 +21,51 @@ interface ProfileApi {
     @GET("profile/routing-stats")
     suspend fun getRoutingStats(): RoutingStatsResponse
 
-    @DELETE("profile/memories/{key}")
-    suspend fun deleteMemory(@Path("key") key: String): DeleteMemoryResponse
+    @DELETE("profile/facts/{id}")
+    suspend fun deleteFact(@Path("id") id: String): DeleteResponse
+
+    @DELETE("profile/clear-all-facts")
+    suspend fun clearAllFacts(): DeleteResponse
 }
+
+// ========== PROFILE RESPONSE (NEW FORMAT) ==========
 
 @Serializable
 data class ProfileResponse(
-    val userId: String,
-    val name: String,
-    val email: String,
-    val memories: List<MemoryItem> = emptyList(),
-    val documentsCount: Int = 0,
-    val entitiesCount: Int = 0,
-    val relationsCount: Int = 0
+    val user: UserInfo,
+    val facts: List<FactItem> = emptyList(),
+    val documents: List<DocumentItem> = emptyList(),
+    val stats: Map<String, Int> = emptyMap()
 )
 
 @Serializable
-data class MemoryItem(
-    val key: String,
-    val value: String,
-    val type: String,
-    val createdAt: String
+data class UserInfo(
+    val id: String,
+    val name: String,
+    val email: String,
+    val avatarUrl: String? = null
 )
+
+@Serializable
+data class FactItem(
+    val id: String,
+    val emoji: String,
+    val text: String,
+    val category: String,
+    val canDelete: Boolean = true
+)
+
+@Serializable
+data class DocumentItem(
+    val id: String,
+    val name: String,
+    val type: String,
+    val summary: String? = null,
+    val entitiesCount: Int = 0,
+    val uploadedAt: String
+)
+
+// ========== KNOWLEDGE GRAPH ==========
 
 @Serializable
 data class KnowledgeGraphResponse(
@@ -70,6 +93,8 @@ data class Relation(
     val weight: Float = 0f
 )
 
+// ========== ROUTING STATS ==========
+
 @Serializable
 data class RoutingStatsResponse(
     val totalRequests: Int = 0,
@@ -79,7 +104,10 @@ data class RoutingStatsResponse(
     val aiRate: String = "0%"
 )
 
+// ========== DELETE RESPONSE ==========
+
 @Serializable
-data class DeleteMemoryResponse(
-    val message: String
+data class DeleteResponse(
+    val message: String,
+    val success: Boolean = true
 )

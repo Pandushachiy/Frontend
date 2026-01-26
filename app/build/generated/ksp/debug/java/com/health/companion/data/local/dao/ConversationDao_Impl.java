@@ -50,7 +50,7 @@ public final class ConversationDao_Impl implements ConversationDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `conversations` (`id`,`title`,`createdAt`,`updatedAt`) VALUES (?,?,?,?)";
+        return "INSERT OR REPLACE INTO `conversations` (`id`,`title`,`createdAt`,`updatedAt`,`isArchived`,`isPinned`,`summary`) VALUES (?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -60,13 +60,22 @@ public final class ConversationDao_Impl implements ConversationDao {
         statement.bindString(2, entity.getTitle());
         statement.bindLong(3, entity.getCreatedAt());
         statement.bindLong(4, entity.getUpdatedAt());
+        final int _tmp = entity.isArchived() ? 1 : 0;
+        statement.bindLong(5, _tmp);
+        final int _tmp_1 = entity.isPinned() ? 1 : 0;
+        statement.bindLong(6, _tmp_1);
+        if (entity.getSummary() == null) {
+          statement.bindNull(7);
+        } else {
+          statement.bindString(7, entity.getSummary());
+        }
       }
     };
     this.__updateAdapterOfConversationEntity = new EntityDeletionOrUpdateAdapter<ConversationEntity>(__db) {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `conversations` SET `id` = ?,`title` = ?,`createdAt` = ?,`updatedAt` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `conversations` SET `id` = ?,`title` = ?,`createdAt` = ?,`updatedAt` = ?,`isArchived` = ?,`isPinned` = ?,`summary` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -76,7 +85,16 @@ public final class ConversationDao_Impl implements ConversationDao {
         statement.bindString(2, entity.getTitle());
         statement.bindLong(3, entity.getCreatedAt());
         statement.bindLong(4, entity.getUpdatedAt());
-        statement.bindString(5, entity.getId());
+        final int _tmp = entity.isArchived() ? 1 : 0;
+        statement.bindLong(5, _tmp);
+        final int _tmp_1 = entity.isPinned() ? 1 : 0;
+        statement.bindLong(6, _tmp_1);
+        if (entity.getSummary() == null) {
+          statement.bindNull(7);
+        } else {
+          statement.bindString(7, entity.getSummary());
+        }
+        statement.bindString(8, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteById = new SharedSQLiteStatement(__db) {
@@ -234,6 +252,9 @@ public final class ConversationDao_Impl implements ConversationDao {
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfUpdatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "updatedAt");
+          final int _cursorIndexOfIsArchived = CursorUtil.getColumnIndexOrThrow(_cursor, "isArchived");
+          final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
+          final int _cursorIndexOfSummary = CursorUtil.getColumnIndexOrThrow(_cursor, "summary");
           final List<ConversationEntity> _result = new ArrayList<ConversationEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final ConversationEntity _item;
@@ -245,7 +266,21 @@ public final class ConversationDao_Impl implements ConversationDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _item = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt);
+            final boolean _tmpIsArchived;
+            final int _tmp;
+            _tmp = _cursor.getInt(_cursorIndexOfIsArchived);
+            _tmpIsArchived = _tmp != 0;
+            final boolean _tmpIsPinned;
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsPinned);
+            _tmpIsPinned = _tmp_1 != 0;
+            final String _tmpSummary;
+            if (_cursor.isNull(_cursorIndexOfSummary)) {
+              _tmpSummary = null;
+            } else {
+              _tmpSummary = _cursor.getString(_cursorIndexOfSummary);
+            }
+            _item = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
             _result.add(_item);
           }
           return _result;
@@ -277,6 +312,9 @@ public final class ConversationDao_Impl implements ConversationDao {
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfUpdatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "updatedAt");
+          final int _cursorIndexOfIsArchived = CursorUtil.getColumnIndexOrThrow(_cursor, "isArchived");
+          final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
+          final int _cursorIndexOfSummary = CursorUtil.getColumnIndexOrThrow(_cursor, "summary");
           final List<ConversationEntity> _result = new ArrayList<ConversationEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final ConversationEntity _item;
@@ -288,7 +326,21 @@ public final class ConversationDao_Impl implements ConversationDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _item = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt);
+            final boolean _tmpIsArchived;
+            final int _tmp;
+            _tmp = _cursor.getInt(_cursorIndexOfIsArchived);
+            _tmpIsArchived = _tmp != 0;
+            final boolean _tmpIsPinned;
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsPinned);
+            _tmpIsPinned = _tmp_1 != 0;
+            final String _tmpSummary;
+            if (_cursor.isNull(_cursorIndexOfSummary)) {
+              _tmpSummary = null;
+            } else {
+              _tmpSummary = _cursor.getString(_cursorIndexOfSummary);
+            }
+            _item = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
             _result.add(_item);
           }
           return _result;
@@ -318,6 +370,9 @@ public final class ConversationDao_Impl implements ConversationDao {
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfUpdatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "updatedAt");
+          final int _cursorIndexOfIsArchived = CursorUtil.getColumnIndexOrThrow(_cursor, "isArchived");
+          final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
+          final int _cursorIndexOfSummary = CursorUtil.getColumnIndexOrThrow(_cursor, "summary");
           final ConversationEntity _result;
           if (_cursor.moveToFirst()) {
             final String _tmpId;
@@ -328,7 +383,21 @@ public final class ConversationDao_Impl implements ConversationDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _result = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt);
+            final boolean _tmpIsArchived;
+            final int _tmp;
+            _tmp = _cursor.getInt(_cursorIndexOfIsArchived);
+            _tmpIsArchived = _tmp != 0;
+            final boolean _tmpIsPinned;
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsPinned);
+            _tmpIsPinned = _tmp_1 != 0;
+            final String _tmpSummary;
+            if (_cursor.isNull(_cursorIndexOfSummary)) {
+              _tmpSummary = null;
+            } else {
+              _tmpSummary = _cursor.getString(_cursorIndexOfSummary);
+            }
+            _result = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
           } else {
             _result = null;
           }

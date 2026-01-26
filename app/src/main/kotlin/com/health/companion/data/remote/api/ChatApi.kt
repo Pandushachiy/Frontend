@@ -22,7 +22,7 @@ interface ChatApi {
     suspend fun getMessages(@Path("conversationId") conversationId: String): List<MessageDTO>
     
     @DELETE("chat/conversations/{conversationId}")
-    suspend fun deleteConversation(@Path("conversationId") conversationId: String): DeleteResponse
+    suspend fun deleteConversation(@Path("conversationId") conversationId: String): ConversationDeleteResponse
 }
 
 @Serializable
@@ -132,6 +132,6 @@ data class MessageDTO(
 )
 
 @Serializable
-data class DeleteResponse(
+data class ConversationDeleteResponse(
     val status: String
 )

@@ -13,6 +13,7 @@ import dagger.internal.QualifierMetadata;
 import dagger.internal.ScopeMetadata;
 import javax.annotation.processing.Generated;
 import javax.inject.Provider;
+import okhttp3.OkHttpClient;
 
 @ScopeMetadata("javax.inject.Singleton")
 @QualifierMetadata
@@ -38,34 +39,37 @@ public final class RepositoryModule_ProvideChatRepositoryFactory implements Fact
 
   private final Provider<TokenManager> tokenManagerProvider;
 
+  private final Provider<OkHttpClient> okHttpClientProvider;
+
   public RepositoryModule_ProvideChatRepositoryFactory(Provider<ChatApi> chatApiProvider,
       Provider<ChatMessageDao> chatMessageDaoProvider,
       Provider<ConversationDao> conversationDaoProvider,
       Provider<WebSocketManager> webSocketManagerProvider,
-      Provider<TokenManager> tokenManagerProvider) {
+      Provider<TokenManager> tokenManagerProvider, Provider<OkHttpClient> okHttpClientProvider) {
     this.chatApiProvider = chatApiProvider;
     this.chatMessageDaoProvider = chatMessageDaoProvider;
     this.conversationDaoProvider = conversationDaoProvider;
     this.webSocketManagerProvider = webSocketManagerProvider;
     this.tokenManagerProvider = tokenManagerProvider;
+    this.okHttpClientProvider = okHttpClientProvider;
   }
 
   @Override
   public ChatRepository get() {
-    return provideChatRepository(chatApiProvider.get(), chatMessageDaoProvider.get(), conversationDaoProvider.get(), webSocketManagerProvider.get(), tokenManagerProvider.get());
+    return provideChatRepository(chatApiProvider.get(), chatMessageDaoProvider.get(), conversationDaoProvider.get(), webSocketManagerProvider.get(), tokenManagerProvider.get(), okHttpClientProvider.get());
   }
 
   public static RepositoryModule_ProvideChatRepositoryFactory create(
       Provider<ChatApi> chatApiProvider, Provider<ChatMessageDao> chatMessageDaoProvider,
       Provider<ConversationDao> conversationDaoProvider,
       Provider<WebSocketManager> webSocketManagerProvider,
-      Provider<TokenManager> tokenManagerProvider) {
-    return new RepositoryModule_ProvideChatRepositoryFactory(chatApiProvider, chatMessageDaoProvider, conversationDaoProvider, webSocketManagerProvider, tokenManagerProvider);
+      Provider<TokenManager> tokenManagerProvider, Provider<OkHttpClient> okHttpClientProvider) {
+    return new RepositoryModule_ProvideChatRepositoryFactory(chatApiProvider, chatMessageDaoProvider, conversationDaoProvider, webSocketManagerProvider, tokenManagerProvider, okHttpClientProvider);
   }
 
   public static ChatRepository provideChatRepository(ChatApi chatApi, ChatMessageDao chatMessageDao,
-      ConversationDao conversationDao, WebSocketManager webSocketManager,
-      TokenManager tokenManager) {
-    return Preconditions.checkNotNullFromProvides(RepositoryModule.INSTANCE.provideChatRepository(chatApi, chatMessageDao, conversationDao, webSocketManager, tokenManager));
+      ConversationDao conversationDao, WebSocketManager webSocketManager, TokenManager tokenManager,
+      OkHttpClient okHttpClient) {
+    return Preconditions.checkNotNullFromProvides(RepositoryModule.INSTANCE.provideChatRepository(chatApi, chatMessageDao, conversationDao, webSocketManager, tokenManager, okHttpClient));
   }
 }

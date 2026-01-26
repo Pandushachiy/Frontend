@@ -2,50 +2,58 @@ package com.health.companion.data.remote.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface DashboardApi {
-    @GET("dashboard/")
+    @GET("dashboard")
     suspend fun getDashboard(): DashboardResponse
 
-    @GET("dashboard/mood-chart/")
+    @GET("dashboard/mood-chart")
     suspend fun getMoodChart(@Query("days") days: Int = 7): MoodChartResponse
 
-    @GET("dashboard/streak/")
+    @GET("dashboard/streak")
     suspend fun getStreak(): StreakResponse
 
-    @GET("dashboard/emotional-state/")
+    @GET("dashboard/emotional-state")
     suspend fun getEmotionalState(): EmotionalStateResponse
 
-    @GET("dashboard/memory-summary/")
+    @GET("dashboard/memory-summary")
     suspend fun getMemorySummary(): MemorySummaryResponse
 }
 
+// ========== DASHBOARD (NEW FORMAT) ==========
+
 @Serializable
 data class DashboardResponse(
-    val userName: String? = null,
     val greeting: String = "",
-    val moodEmoji: String = "😊",
-    val overallStatus: String = "neutral",
-    val widgets: List<Widget> = emptyList(),
-    val generatedAt: String? = null
+    val insight: String = "",
+    val messagesThisWeek: Int = 0,
+    val streak: StreakInfo = StreakInfo(),
+    val factAboutMe: FactAboutMe? = null,
+    val quickActions: List<QuickAction> = emptyList(),
+    val lastUpdated: String = ""
 )
 
 @Serializable
-data class Widget(
-    val type: String,
-    val priority: String? = null,
-    val title: String? = null,
-    val data: Map<String, JsonElement> = emptyMap(),
-    val action: WidgetAction? = null
+data class StreakInfo(
+    val days: Int = 0,
+    val emoji: String = "👋",
+    val message: String = "Начни общение!"
 )
 
 @Serializable
-data class WidgetAction(
-    val label: String,
-    val route: String
+data class FactAboutMe(
+    val emoji: String = "💡",
+    val text: String = ""
+)
+
+@Serializable
+data class QuickAction(
+    val id: String,
+    val emoji: String,
+    val title: String,
+    val action: String
 )
 
 // ========== MOOD CHART ==========
