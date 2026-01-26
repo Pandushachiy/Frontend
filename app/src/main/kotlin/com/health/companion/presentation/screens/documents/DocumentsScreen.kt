@@ -69,9 +69,11 @@ fun DocumentsScreen(
     }
     
     val pickImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let { viewModel.uploadDocument(it) }
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            viewModel.uploadDocuments(uris)
+        }
     }
     
     val pickDocumentLauncher = rememberLauncherForActivityResult(

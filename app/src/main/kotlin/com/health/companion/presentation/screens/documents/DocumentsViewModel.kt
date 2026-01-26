@@ -198,6 +198,51 @@ class DocumentsViewModel @Inject constructor(
             }
         }
     }
+    
+    /**
+     * Upload multiple documents at once (from gallery multi-select)
+     */
+    fun uploadDocuments(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        
+        viewModelScope.launch {
+            try {
+                _isUploading.value = true
+                _uiState.value = DocumentsUiState.Uploading
+                
+                Timber.d("Uploading ${uris.size} documents")
+                
+                var successCount = 0
+                var failCount = 0
+                
+                uris.forEach { uri ->
+                    val result = documentRepository.uploadDocumentFromUri(uri)
+                    result.onSuccess { response ->
+                        Timber.d("Document uploaded: ${response.id}")
+                        localUploadTimes[response.id] = System.currentTimeMillis()
+                        successCount++
+                    }.onFailure { e ->
+                        Timber.e(e, "Failed to upload: $uri")
+                        failCount++
+                    }
+                }
+                
+                loadDocuments()
+                
+                if (failCount == 0) {
+                    _uiState.value = DocumentsUiState.UploadSuccess("$successCount файлов")
+                } else {
+                    _uiState.value = DocumentsUiState.Error("Загружено $successCount, ошибок: $failCount")
+                }
+                
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to upload documents")
+                _uiState.value = DocumentsUiState.Error(e.message ?: "Upload failed")
+            } finally {
+                _isUploading.value = false
+            }
+        }
+    }
 
     /**
      * Upload document from File (from camera)

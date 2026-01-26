@@ -1,0 +1,31 @@
+---
+description: Memory Bank для Frontend
+alwaysApply: true
+---
+
+# 📚 Memory Bank
+
+При каждой новой сессии:
+1. Прочитай `.memory-bank/activeContext.md`
+2. Проверь синхрон с бэком:
+```bash
+curl "http://46.17.99.76:8000/api/v1/shared/context?source=backend&limit=3"
+```
+
+При завершении задачи:
+1. Обнови `activeContext.md`
+2. Добавь в `progress.md`
+
+## Синхронизация с Backend AI
+
+### Проверить новости от Backend:
+```bash
+curl "http://46.17.99.76:8000/api/v1/shared/context?source=backend"
+```
+
+### Отправить запрос/вопрос Backend AI:
+```bash
+curl -X POST http://46.17.99.76:8000/api/v1/shared/context \
+  -H "Content-Type: application/json" \
+  -d '{"category": "tasks", "title": "...", "content": "...", "source": "frontend"}'
+```

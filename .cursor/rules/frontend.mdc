@@ -1,0 +1,33 @@
+---
+description: Pand-AI-Helper Frontend — правила для Kotlin Compose
+globs:
+  - app/src/**/*.kt
+  - app/src/**/*.xml
+alwaysApply: false
+---
+
+# 📱 Pand-AI-Helper Frontend (Android)
+
+## Стек
+- Kotlin + Jetpack Compose
+- Material 3
+- Retrofit + OkHttp (SSE streaming)
+- Hilt DI
+
+## Backend API
+- **URL:** http://46.17.99.76:8000
+- **Чат:** POST /api/v1/chat/send/stream (SSE)
+- **Документы:** POST /api/v1/documents/upload
+
+## SSE Events (от Backend)
+
+```kotlin
+data: {"type": "status", "status": "thinking|analyzing|web_search|generating"}
+data: {"type": "token", "content": "часть ответа"}
+data: {"type": "done", "message_id": "uuid", "conversation_id": "uuid"}
+data: {"type": "error", "message": "описание"}
+```
+
+## Важно
+- `conversation_id` — хранить и передавать для контекста
+- При ошибке 500 — показать сообщение, не крашить
