@@ -1,12 +1,22 @@
 package com.health.companion.presentation.screens.documents
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,25 +31,67 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.health.companion.BuildConfig
 import com.health.companion.data.remote.api.DocumentResponse
 import com.health.companion.presentation.components.GlassCard
 import com.health.companion.presentation.components.GlassTheme
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.format.DateTimeParseException
+
+// Base host for constructing full URLs from relative paths
+private val API_HOST = BuildConfig.API_BASE_URL.substringBefore("/api/")  // http://46.17.99.76:8000
+
+// Helper functions to construct document URLs
+// Backend returns relative paths like "/api/v1/documents/{id}/thumbnail"
+private fun DocumentResponse.getThumbnailUrl(): String {
+    return when {
+        thumbnailUrl != null -> "$API_HOST$thumbnailUrl"
+        else -> "${BuildConfig.API_BASE_URL}/documents/$id/thumbnail"
+    }
+}
+
+private fun DocumentResponse.getPreviewUrl(): String {
+    return when {
+        previewUrl != null -> "$API_HOST$previewUrl"
+        else -> "${BuildConfig.API_BASE_URL}/documents/$id/preview"
+    }
+}
+
+private fun DocumentResponse.getDownloadUrl(): String {
+    return when {
+        downloadUrl != null -> "$API_HOST$downloadUrl"
+        else -> "${BuildConfig.API_BASE_URL}/documents/$id/download"
+    }
+}
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -51,6 +103,7 @@ fun DocumentsScreen(
     val documents by viewModel.documents.collectAsState()
     val isUploading by viewModel.isUploading.collectAsState()
     val displayNames by viewModel.displayNames.collectAsState()
+    val authToken by viewModel.authToken.collectAsState()
     val now by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
             delay(30_000)
@@ -86,14 +139,17 @@ fun DocumentsScreen(
     var renameText by remember { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(DocFilter.All) }
     var sort by rememberSaveable { mutableStateOf(DocSort.Newest) }
+    
+    // Preview state
+    var previewDocument by remember { mutableStateOf<DocumentResponse?>(null) }
 
     val visibleDocuments = remember(documents, displayNames, filter, sort) {
         val filtered = when (filter) {
             DocFilter.All -> documents
-            DocFilter.Pdf -> documents.filter { docCategory(it.mime_type) == DocFilter.Pdf }
-            DocFilter.Images -> documents.filter { docCategory(it.mime_type) == DocFilter.Images }
-            DocFilter.Docs -> documents.filter { docCategory(it.mime_type) == DocFilter.Docs }
-            DocFilter.Other -> documents.filter { docCategory(it.mime_type) == DocFilter.Other }
+            DocFilter.Pdf -> documents.filter { docCategory(it.mimeType) == DocFilter.Pdf }
+            DocFilter.Images -> documents.filter { docCategory(it.mimeType) == DocFilter.Images }
+            DocFilter.Docs -> documents.filter { docCategory(it.mimeType) == DocFilter.Docs }
+            DocFilter.Other -> documents.filter { docCategory(it.mimeType) == DocFilter.Other }
         }
         when (sort) {
             DocSort.Newest -> filtered.sortedByDescending { documentTimestamp(it) }
@@ -112,123 +168,47 @@ fun DocumentsScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
                 .statusBarsPadding()
-    ) {
-            Spacer(modifier = Modifier.height(8.dp))
-            
-        // Header
-            GlassCard(
-            modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 20.dp,
-                backgroundColor = GlassTheme.glassWhite,
-                borderColor = GlassTheme.glassBorder
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(
-                                            GlassTheme.accentSecondary,
-                                            GlassTheme.accentTertiary
-                                        )
-                                    ),
-                                    CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.FolderOpen,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-            Text(
-                text = "Документы",
-                                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = GlassTheme.textPrimary
-            )
-                            Text(
-                                text = "${documents.size} файлов",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = GlassTheme.textSecondary
-                            )
-                        }
-                    }
-                    
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.1f))
-                            .clickable { viewModel.refreshDocuments() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                    contentDescription = "Обновить",
-                            tint = GlassTheme.accentPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Filters
-            LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+            // Filters: Все → Фото → PDF → DOC
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
                     GlassFilterChip(
                         text = "Все",
                         icon = Icons.Default.Apps,
-                selected = filter == DocFilter.All,
+                        selected = filter == DocFilter.All,
                         onClick = { filter = DocFilter.All }
-                    )
-                }
-                item {
-                    GlassFilterChip(
-                        text = "PDF",
-                        icon = Icons.Default.PictureAsPdf,
-                selected = filter == DocFilter.Pdf,
-                onClick = { filter = DocFilter.Pdf },
-                        accentColor = Color(0xFFEF5350)
                     )
                 }
                 item {
                     GlassFilterChip(
                         text = "Фото",
                         icon = Icons.Default.Image,
-                selected = filter == DocFilter.Images,
-                onClick = { filter = DocFilter.Images },
+                        selected = filter == DocFilter.Images,
+                        onClick = { filter = DocFilter.Images },
                         accentColor = Color(0xFF66BB6A)
+                    )
+                }
+                item {
+                    GlassFilterChip(
+                        text = "PDF",
+                        icon = Icons.Default.PictureAsPdf,
+                        selected = filter == DocFilter.Pdf,
+                        onClick = { filter = DocFilter.Pdf },
+                        accentColor = Color(0xFFEF5350)
                     )
                 }
                 item {
                     GlassFilterChip(
                         text = "DOC",
                         icon = Icons.Default.Description,
-                selected = filter == DocFilter.Docs,
-                onClick = { filter = DocFilter.Docs },
+                        selected = filter == DocFilter.Docs,
+                        onClick = { filter = DocFilter.Docs },
                         accentColor = Color(0xFF42A5F5)
-            )
+                    )
                 }
-                item {
-            Spacer(Modifier.width(8.dp))
-                }
+                item { Spacer(Modifier.width(4.dp)) }
                 item {
                     GlassSortChip(
                         text = when (sort) {
@@ -247,10 +227,13 @@ fun DocumentsScreen(
                 }
             }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Content
             Box(modifier = Modifier.weight(1f)) {
+                // Отступ снизу = высота панели загрузки (3 кнопки + padding)
+                val uploadPanelHeight = 76.dp
+                
                 when {
                     uiState is DocumentsUiState.Error && documents.isEmpty() -> {
                         ErrorState(
@@ -259,151 +242,172 @@ fun DocumentsScreen(
                         )
                         }
                     uiState is DocumentsUiState.Loading && documents.isEmpty() -> {
-                LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(5) {
-                        DocumentSkeletonItem()
-                    }
-                }
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(bottom = uploadPanelHeight)
+                        ) {
+                            items(5) {
+                                DocumentSkeletonItem()
+                            }
+                        }
                     }
                     visibleDocuments.isEmpty() -> {
                         EmptyState(isEmpty = documents.isEmpty())
                     }
                     else -> {
-                LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(visibleDocuments, key = { it.id }) { document ->
-                        val rawName = displayNames[document.id] ?: document.filename
-                        val displayName = rawName.substringBeforeLast('.', rawName)
-                                GlassDocumentItem(
-                            document = document,
-                            displayName = displayName,
-                            showReady = viewModel.shouldShowReady(document, now),
-                            fileTypeLabel = formatMimeType(document.mime_type),
-                            onRename = {
-                                renameTarget = document
-                                renameText = displayName
-                            },
-                            onDelete = { viewModel.deleteDocument(document.id) }
-                        )
-                    }
+                        val context = LocalContext.current
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(bottom = uploadPanelHeight)
+                        ) {
+                            items(visibleDocuments, key = { it.id }) { document ->
+                                // Используем smartTitle если есть, иначе displayName
+                                val smartTitle = document.smartTitle
+                                val rawName = displayNames[document.id] ?: document.filename
+                                val displayName = smartTitle ?: rawName.substringBeforeLast('.', rawName)
+                                
+                                // Construct URLs for this document
+                                val thumbUrl = document.getThumbnailUrl()
+                                val prevUrl = document.getPreviewUrl()
+                                
+                                // Swipe-to-delete wrapper
+                                SwipeableDocumentItem(
+                                    onDelete = { viewModel.deleteDocument(document.id) }
+                                ) {
+                                    GlassDocumentItemV2(
+                                        document = document,
+                                        displayName = displayName,
+                                        showReady = viewModel.shouldShowReady(document, now),
+                                        fileTypeLabel = formatMimeType(document.mimeType),
+                                        thumbnailUrl = thumbUrl,
+                                        authToken = authToken,
+                                        onPreview = {
+                                            val isImage = document.mimeType?.startsWith("image/", ignoreCase = true) == true ||
+                                                document.documentType?.equals("image", ignoreCase = true) == true ||
+                                                document.filename.lowercase().let { 
+                                                    it.endsWith(".jpg") || it.endsWith(".jpeg") || 
+                                                    it.endsWith(".png") || it.endsWith(".webp") || 
+                                                    it.endsWith(".gif") || it.endsWith(".heic")
+                                                }
+                                            
+                                            if (isImage) {
+                                                previewDocument = document
+                                            } else {
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(prevUrl))
+                                                context.startActivity(intent)
+                                            }
+                                        },
+                                        onRename = {
+                                            renameTarget = document
+                                            renameText = displayName
+                                        }
+                                    )
+                                }
+                            }
                             item { Spacer(modifier = Modifier.height(8.dp)) }
                         }
                     }
                 }
             }
 
-            // Upload Panel
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp + bottomPadding),
-                cornerRadius = 20.dp,
-                backgroundColor = GlassTheme.glassWhite,
-                borderColor = GlassTheme.glassBorder
+        }
+        
+        // Upload Panel - сплошной фон, чтобы контент не просвечивал
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(Color(0xFF0D1117)) // Сплошной фон
+                .padding(bottom = bottomPadding)
+                .padding(horizontal = 16.dp)
+                .padding(top = 10.dp, bottom = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                        GlassActionButton(
-                            icon = Icons.Default.CameraAlt,
-                            text = "Камера",
-                            modifier = Modifier.weight(1f),
-                        onClick = {
-                            if (cameraPermission.status.isGranted) {
-                                viewModel.prepareCamera()?.let { uri ->
-                                    takePictureLauncher.launch(uri)
-                                }
-                            } else {
-                                cameraPermission.launchPermissionRequest()
+                // Камера
+                GlassActionButton(
+                    icon = Icons.Default.CameraAlt,
+                    text = "Камера",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        if (cameraPermission.status.isGranted) {
+                            viewModel.prepareCamera()?.let { uri ->
+                                takePictureLauncher.launch(uri)
                             }
-                            }
-                        )
-                        GlassActionButton(
-                            icon = Icons.Default.Image,
-                            text = "Галерея",
-                        modifier = Modifier.weight(1f),
-                            onClick = { pickImageLauncher.launch("image/*") }
-                        )
+                        } else {
+                            cameraPermission.launchPermissionRequest()
+                        }
                     }
-
-                    // Main upload button
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(
-                                        GlassTheme.accentPrimary,
-                                        GlassTheme.accentSecondary
-                                    )
-                                )
-                            )
-                            .clickable {
+                )
+                // Галерея
+                GlassActionButton(
+                    icon = Icons.Default.Image,
+                    text = "Галерея",
+                    modifier = Modifier.weight(1f),
+                    onClick = { pickImageLauncher.launch("image/*") }
+                )
+                // Файлы (PDF, DOC и т.д.)
+                GlassActionButton(
+                    icon = Icons.Default.AttachFile,
+                    text = "Файл",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
                         pickDocumentLauncher.launch(
                             arrayOf(
                                 "application/pdf",
-                                "image/*",
                                 "application/msword",
-                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                "application/vnd.ms-excel",
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                "application/vnd.ms-powerpoint",
+                                "application/vnd.openxmlformats-officedocument.presentationml.presentation"
                             )
                         )
-                    },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                ) {
-                            Icon(
-                                Icons.Default.Upload,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                    Spacer(Modifier.width(8.dp))
-                            Text(
-                                "Загрузить документ",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                }
                     }
+                )
+            }
 
-                    // Upload progress
-                if (isUploading) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = GlassTheme.accentPrimary,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(Modifier.width(10.dp))
-                    Text(
-                                text = "Загрузка...",
-                        style = MaterialTheme.typography.bodySmall,
-                                color = GlassTheme.textSecondary
+            // Upload progress
+            if (isUploading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = GlassTheme.accentPrimary,
+                        strokeWidth = 2.dp
                     )
-                        }
-                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = "Загрузка...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = GlassTheme.textSecondary
+                    )
                 }
             }
         }
+    }
+
+    // Image Preview Dialog - fullscreen with zoom/pan
+    val previewContext = LocalContext.current
+    previewDocument?.let { doc ->
+        ImagePreviewDialog(
+            imageUrl = doc.getPreviewUrl(),
+            title = doc.smartTitle ?: doc.filename,
+            authToken = authToken,
+            onDismiss = { previewDocument = null },
+            onDownload = {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(doc.getDownloadUrl()))
+                previewContext.startActivity(intent)
+            }
+        )
     }
 
     // Rename Dialog
@@ -464,32 +468,33 @@ private fun GlassFilterChip(
 ) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(
                 if (selected) accentColor.copy(alpha = 0.2f)
-                else Color.White.copy(alpha = 0.08f)
+                else Color.White.copy(alpha = 0.06f)
             )
             .border(
                 1.dp,
-                if (selected) accentColor.copy(alpha = 0.5f)
-                else Color.White.copy(alpha = 0.1f),
-                RoundedCornerShape(12.dp)
+                if (selected) accentColor.copy(alpha = 0.4f)
+                else Color.Transparent,
+                RoundedCornerShape(8.dp)
             )
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = if (selected) accentColor else GlassTheme.textSecondary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(14.dp)
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(4.dp))
             Text(
                 text,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (selected) accentColor else GlassTheme.textSecondary
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selected) accentColor else GlassTheme.textSecondary,
+                fontSize = 11.sp
             )
         }
     }
@@ -500,13 +505,12 @@ private fun GlassSortChip(
     text: String,
     onClick: () -> Unit
 ) {
-            Box(
-                modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = 0.06f))
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -536,8 +540,8 @@ private fun GlassActionButton(
         modifier = modifier
             .height(44.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+            .background(Color(0xFF1E2433).copy(alpha = 0.9f))
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -561,19 +565,114 @@ private fun GlassActionButton(
     }
 }
 
+/**
+ * Swipe-to-reveal delete button - свайп показывает кнопку, не удаляет сразу
+ */
 @Composable
-private fun GlassDocumentItem(
+private fun SwipeableDocumentItem(
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val offsetX = remember { Animatable(0f) }
+    val deleteButtonWidth = 65.dp
+    val deleteButtonWidthPx = with(LocalDensity.current) { deleteButtonWidth.toPx() }
+    
+    var isRevealed by remember { mutableStateOf(false) }
+    
+    // Высота элемента
+    var itemHeight by remember { mutableStateOf(0) }
+    
+    Box(modifier = Modifier.fillMaxWidth()) {
+        // Кнопка удаления - появляется справа при свайпе
+        // Показываем только когда есть смещение
+        if (offsetX.value < -1f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(deleteButtonWidth + 4.dp)
+                    .height(with(LocalDensity.current) { itemHeight.toDp() })
+                    .clip(RoundedCornerShape(topEnd = 14.dp, bottomEnd = 14.dp))
+                    .background(GlassTheme.statusError)
+                    .clickable {
+                        coroutineScope.launch {
+                            offsetX.animateTo(0f, tween(200))
+                            isRevealed = false
+                        }
+                        onDelete()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+        
+        // Основной контент (свайпается)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { itemHeight = it.height }
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            coroutineScope.launch {
+                                if (offsetX.value < -deleteButtonWidthPx / 2) {
+                                    offsetX.animateTo(-deleteButtonWidthPx, tween(150))
+                                    isRevealed = true
+                                } else {
+                                    offsetX.animateTo(0f, tween(150))
+                                    isRevealed = false
+                                }
+                            }
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            coroutineScope.launch {
+                                val newOffset = (offsetX.value + dragAmount).coerceIn(-deleteButtonWidthPx, 0f)
+                                offsetX.snapTo(newOffset)
+                            }
+                        }
+                    )
+                }
+                .clickable(enabled = isRevealed) {
+                    coroutineScope.launch {
+                        offsetX.animateTo(0f, tween(150))
+                        isRevealed = false
+                    }
+                }
+        ) {
+            content()
+        }
+    }
+}
+
+/**
+ * Компонент документа с thumbnail, smartTitle
+ */
+@Composable
+private fun GlassDocumentItemV2(
     document: DocumentResponse,
     displayName: String,
     showReady: Boolean,
     fileTypeLabel: String,
-    onRename: () -> Unit,
-    onDelete: () -> Unit
+    thumbnailUrl: String,
+    authToken: String?,
+    onPreview: () -> Unit,
+    onRename: () -> Unit
 ) {
-    val (icon, tint) = getFileTypeIconAndColor(document.mime_type)
+    val (icon, tint) = getFileTypeIconAndColor(document.mimeType)
+    val isImage = document.mimeType?.startsWith("image/") == true
+    val context = LocalContext.current
     
     GlassCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onPreview() },
         cornerRadius = 14.dp,
         backgroundColor = GlassTheme.glassWhite,
         borderColor = GlassTheme.glassBorder
@@ -581,23 +680,54 @@ private fun GlassDocumentItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // File icon
+            // Thumbnail - с авторизацией
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(52.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(tint.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
+                if (isImage) {
+                    SubcomposeAsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(thumbnailUrl)
+                            .crossfade(150)
+                            .memoryCacheKey(thumbnailUrl)
+                            .diskCacheKey(thumbnailUrl)
+                            .setHeader("Authorization", "Bearer ${authToken ?: ""}")
+                            .build(),
+                        contentDescription = displayName,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(10.dp)),
+                        contentScale = ContentScale.Crop,
+                        loading = {
+                            // Placeholder вместо спиннера для быстрого UI
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(tint.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(icon, null, tint = tint.copy(alpha = 0.3f), modifier = Modifier.size(22.dp))
+                            }
+                        },
+                        error = {
+                            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(26.dp))
+                        }
+                    )
+                } else {
                     Icon(
-                    icon,
+                        icon,
                         contentDescription = null,
                         tint = tint,
-                    modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(26.dp)
                     )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -609,8 +739,9 @@ private fun GlassDocumentItem(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = GlassTheme.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -619,50 +750,33 @@ private fun GlassDocumentItem(
                             status = document.status ?: "unknown",
                             showReady = showReady
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                     }
                     Text(
                         text = fileTypeLabel.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
                         color = GlassTheme.textTertiary,
-                        letterSpacing = 1.sp
+                        letterSpacing = 0.8.sp,
+                        fontSize = 10.sp
                     )
                 }
             }
 
-            // Actions
-            Row {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable { onRename() },
-                    contentAlignment = Alignment.Center
-                ) {
+            // Только кнопка редактирования (удаление - через свайп)
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .clickable { onRename() },
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                        Icons.Default.Edit,
+                    Icons.Default.Edit,
                     contentDescription = "Rename",
-                        tint = GlassTheme.accentPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                Spacer(Modifier.width(6.dp))
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(GlassTheme.statusError.copy(alpha = 0.1f))
-                        .clickable { onDelete() },
-                    contentAlignment = Alignment.Center
-                ) {
-                Icon(
-                        Icons.Default.Delete,
-                    contentDescription = "Delete",
-                        tint = GlassTheme.statusError,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                    tint = GlassTheme.textSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -743,87 +857,21 @@ private fun DocumentSkeletonItem() {
 
 @Composable
 private fun EmptyState(isEmpty: Boolean) {
-    val infiniteTransition = rememberInfiniteTransition(label = "empty")
+    // Если по фильтру ничего нет - просто ничего не показываем
+    if (!isEmpty) return
     
-    val float by infiniteTransition.animateFloat(
-        initialValue = -5f,
-        targetValue = 5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "float"
-    )
-    
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
-    )
-
+    // Только когда совсем пусто - лаконичный текст
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 60.dp),
+        contentAlignment = Alignment.TopCenter
     ) {
-        GlassCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            cornerRadius = 24.dp,
-            backgroundColor = GlassTheme.glassWhite,
-            borderColor = GlassTheme.glassBorder
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .offset(y = float.dp)
-                        .graphicsLayer { scaleX = scale; scaleY = scale }
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    GlassTheme.accentSecondary.copy(alpha = 0.3f),
-                                    GlassTheme.accentTertiary.copy(alpha = 0.2f)
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "📂", fontSize = 36.sp)
-                }
-                
-                Spacer(modifier = Modifier.height(20.dp))
-                
-                Text(
-                    text = if (isEmpty) "Пока пусто" else "Не найдено",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = GlassTheme.textPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = if (isEmpty) 
-                        "Загрузите документы\nдля анализа и поиска" 
-                    else 
-                        "Попробуйте другой фильтр",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = GlassTheme.textSecondary,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
+        Text(
+            text = "Загрузите файлы",
+            style = MaterialTheme.typography.bodyMedium,
+            color = GlassTheme.textTertiary
+        )
     }
 }
 
@@ -935,10 +983,167 @@ private fun docCategory(mimeType: String?): DocFilter {
 }
 
 private fun documentTimestamp(document: DocumentResponse): Long {
-    val raw = document.uploaded_at ?: return 0L
+    val raw = document.uploadedAt ?: return 0L
     return try {
         Instant.parse(raw).toEpochMilli()
     } catch (_: DateTimeParseException) {
         0L
+    }
+}
+
+/**
+ * Безрамочный Preview — прозрачный фон, фото всплывает поверх приложения
+ */
+@Composable
+private fun ImagePreviewDialog(
+    imageUrl: String,
+    title: String,
+    authToken: String?,
+    onDismiss: () -> Unit,
+    onDownload: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    // Animation
+    var visible by remember { mutableStateOf(false) }
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(200),
+        label = "alpha"
+    )
+    val animatedScale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.92f,
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 500f),
+        label = "scale"
+    )
+    
+    LaunchedEffect(Unit) { visible = true }
+    
+    // Zoom/Pan
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var imageSize by remember { mutableStateOf(IntSize.Zero) }
+    
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        val newScale = (scale * zoomChange).coerceIn(1f, 4f)
+        scale = newScale
+        
+        if (newScale > 1f && imageSize.width > 0) {
+            val maxX = imageSize.width * (newScale - 1) / 2
+            val maxY = imageSize.height * (newScale - 1) / 2
+            offset = Offset(
+                x = (offset.x + panChange.x).coerceIn(-maxX, maxX),
+                y = (offset.y + panChange.y).coerceIn(-maxY, maxY)
+            )
+        } else {
+            offset = Offset.Zero
+        }
+    }
+    
+    var lastTapTime by remember { mutableLongStateOf(0L) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = animatedAlpha }
+                // Полупрозрачный фон - видно приложение сзади
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                )
+                .systemBarsPadding(),
+            contentAlignment = Alignment.Center
+        ) {
+            // Изображение строго по размеру, без scroll
+            SubcomposeAsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(150)
+                    .memoryCacheKey(imageUrl)
+                    .diskCacheKey(imageUrl)
+                    .setHeader("Authorization", "Bearer ${authToken ?: ""}")
+                    .build(),
+                contentDescription = title,
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = animatedScale * scale
+                        scaleY = animatedScale * scale
+                        translationX = offset.x
+                        translationY = offset.y
+                    }
+                    .padding(horizontal = 16.dp)
+                    .onSizeChanged { imageSize = it }
+                    .clip(RoundedCornerShape(16.dp))
+                    .transformable(state = transformState)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastTapTime < 300) {
+                            scale = 1f
+                            offset = Offset.Zero
+                        }
+                        lastTapTime = now
+                    },
+                contentScale = ContentScale.Fit,
+                loading = {
+                    Box(
+                        modifier = Modifier.size(80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                },
+                error = {
+                    Box(
+                        modifier = Modifier.size(80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.BrokenImage,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.4f),
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                }
+            )
+            
+            // Крестик снизу
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 40.dp)
+                    .graphicsLayer { alpha = animatedAlpha * 0.9f }
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.1f))
+                    .clickable { onDismiss() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Закрыть",
+                    tint = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }

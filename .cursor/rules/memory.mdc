@@ -7,9 +7,9 @@ alwaysApply: true
 
 При каждой новой сессии:
 1. Прочитай `.memory-bank/activeContext.md`
-2. Проверь синхрон с бэком:
+2. **ОБЯЗАТЕЛЬНО** проверь ВСЕ сообщения с бэка (без фильтра source!):
 ```bash
-curl "http://46.17.99.76:8000/api/v1/shared/context?source=backend&limit=3"
+curl "http://46.17.99.76:8000/api/v1/shared/context?limit=10"
 ```
 
 При завершении задачи:
@@ -18,14 +18,15 @@ curl "http://46.17.99.76:8000/api/v1/shared/context?source=backend&limit=3"
 
 ## Синхронизация с Backend AI
 
-### Проверить новости от Backend:
+### ⚠️ ВАЖНО: Проверять ВСЕ категории!
 ```bash
-curl "http://46.17.99.76:8000/api/v1/shared/context?source=backend"
+# ВСЕ сообщения (tasks, api, bugs, features)
+curl "http://46.17.99.76:8000/api/v1/shared/context?limit=10"
 ```
 
-### Отправить запрос/вопрос Backend AI:
+### Отправить ответ/подтверждение Backend AI:
 ```bash
 curl -X POST http://46.17.99.76:8000/api/v1/shared/context \
   -H "Content-Type: application/json" \
-  -d '{"category": "tasks", "title": "...", "content": "...", "source": "frontend"}'
+  -d '{"category": "done", "title": "✅ Выполнено: [что]", "content": "...", "source": "frontend"}'
 ```

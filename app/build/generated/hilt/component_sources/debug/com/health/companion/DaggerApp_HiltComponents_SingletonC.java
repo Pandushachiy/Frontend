@@ -545,13 +545,13 @@ public final class DaggerApp_HiltComponents_SingletonC {
           return (T) new AuthViewModel(singletonCImpl.provideAuthRepositoryProvider.get());
 
           case 1: // com.health.companion.presentation.screens.chat.ChatViewModel 
-          return (T) new ChatViewModel(singletonCImpl.provideChatRepositoryProvider.get(), singletonCImpl.provideAuthRepositoryProvider.get(), singletonCImpl.provideDocumentRepositoryProvider.get(), singletonCImpl.provideVoiceInputManagerProvider.get(), singletonCImpl.voiceRepositoryProvider.get(), viewModelCImpl.savedStateHandle);
+          return (T) new ChatViewModel(singletonCImpl.provideChatRepositoryProvider.get(), singletonCImpl.provideAuthRepositoryProvider.get(), singletonCImpl.provideDocumentRepositoryProvider.get(), singletonCImpl.provideVoiceInputManagerProvider.get(), singletonCImpl.voiceRepositoryProvider.get(), singletonCImpl.tokenManagerProvider.get(), viewModelCImpl.savedStateHandle);
 
           case 2: // com.health.companion.presentation.screens.dashboard.DashboardViewModel 
           return (T) new DashboardViewModel(singletonCImpl.provideDashboardRepositoryProvider.get());
 
           case 3: // com.health.companion.presentation.screens.documents.DocumentsViewModel 
-          return (T) new DocumentsViewModel(singletonCImpl.provideDocumentRepositoryProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+          return (T) new DocumentsViewModel(singletonCImpl.provideDocumentRepositoryProvider.get(), singletonCImpl.tokenManagerProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           case 4: // com.health.companion.presentation.screens.health.HealthViewModel 
           return (T) new HealthViewModel(singletonCImpl.provideHealthRepositoryProvider.get());

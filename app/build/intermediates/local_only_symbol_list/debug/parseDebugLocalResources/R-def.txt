@@ -15,6 +15,7 @@ color primary_dark
 color primary_light
 color secondary
 color secondary_light
+color splash_background
 color success
 color surface_dark
 color surface_light

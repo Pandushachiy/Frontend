@@ -1,0 +1,889 @@
+package com.health.companion.presentation.screens.chat
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
+import com.health.companion.BuildConfig
+import com.health.companion.data.remote.api.MessageDTO
+import com.health.companion.presentation.components.*
+import timber.log.Timber
+import java.text.SimpleDateFormat
+import java.util.*
+
+// API Host for constructing full URLs
+private val API_HOST = BuildConfig.API_BASE_URL.substringBefore("/api/")
+
+// ============================================================================
+// ChatBubble V2 — по спецификации chat_design_prompt.md
+// Telegram-style с асимметричными углами и timestamp снаружи
+// ============================================================================
+
+/**
+ * Message bubble V2 — компактный дизайн
+ * 
+ * - Скруглённые углы (16dp/20dp)
+ * - БЕЗ аватара юзера
+ * - Салатовый/мятный градиент для user
+ * - Цветной полупрозрачный фон для AI
+ * - Компактные размеры
+ */
+@Composable
+fun ChatBubbleV2(
+    message: MessageDTO,
+    status: MessageSendStatus?,
+    isFirstInGroup: Boolean,
+    isLastInGroup: Boolean,
+    modifier: Modifier = Modifier,
+    animate: Boolean = false,
+    authToken: String? = null,
+    onRetry: () -> Unit = {}
+) {
+    val isUser = message.role == "user"
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val maxBubbleWidth = screenWidth * 0.82f  // Чуть меньше для компактности
+    
+    val formattedText = remember(message.content) { formatMessageTextV2(message.content) }
+    
+    val timestamp = remember(message.created_at) {
+        try {
+            val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            dateFormat.format(Date(message.created_at?.toLongOrNull() ?: System.currentTimeMillis()))
+        } catch (e: Exception) { "" }
+    }
+    
+    // Более скруглённые формы
+    val bubbleShape = RoundedCornerShape(
+        topStart = if (!isUser && isFirstInGroup) 6.dp else 18.dp,
+        topEnd = if (isUser && isFirstInGroup) 6.dp else 18.dp,
+        bottomStart = 18.dp,
+        bottomEnd = 18.dp
+    )
+    
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Top  // TOP! Чтобы аватар не смещался
+        ) {
+            // === ASSISTANT SIDE ===
+            if (!isUser) {
+                // Avatar (только для первого в группе) — выравнивание TOP
+                if (isFirstInGroup) {
+                    BlueberryAvatarV2(size = 28.dp)
+                    Spacer(Modifier.width(6.dp))
+                } else {
+                    Spacer(Modifier.width(34.dp))
+                }
+                
+                // Проверяем есть ли картинка
+                val hasImage = message.imageUrl != null
+                val hasText = message.content.isNotBlank()
+                
+                Column(modifier = Modifier.widthIn(max = maxBubbleWidth)) {
+                    // Картинка БЕЗ подложки — напрямую
+                    if (hasImage) {
+                        message.imageUrl?.let { imageUrl ->
+                            Timber.d("ChatBubbleV2: displaying image $imageUrl")
+                            android.util.Log.d("IMAGE_DEBUG", "🖼️ ChatBubbleV2 showing imageUrl=$imageUrl")
+                            GeneratedImageCard(
+                                imageUrl = imageUrl,
+                                authToken = authToken,
+                                modifier = Modifier
+                            )
+                        }
+                        if (hasText) Spacer(Modifier.height(6.dp))
+                    }
+                    
+                    // Текст в bubble (если есть)
+                    if (hasText) {
+                        Box(
+                            modifier = Modifier
+                                .shadow(2.dp, bubbleShape, spotColor = Color.Black.copy(alpha = 0.2f))
+                                .clip(bubbleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            Color(0xFF2A3352).copy(alpha = 0.95f),
+                                            Color(0xFF1E2744).copy(alpha = 0.9f)
+                                        )
+                                    ),
+                                    bubbleShape
+                                )
+                                .border(1.dp, Color(0xFF4A5580).copy(alpha = 0.4f), bubbleShape)
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Column {
+                                if (message.agent_name != null && 
+                                    message.agent_name !in listOf("chat", "offline", "streaming") &&
+                                    isFirstInGroup && !hasImage) {
+                                    Text(
+                                        text = message.agent_name,
+                                        style = GlassTypography.timestamp.copy(
+                                            color = GlassColors.accent,
+                                            fontWeight = FontWeight.Medium
+                                        ),
+                                        modifier = Modifier.padding(bottom = 2.dp)
+                                    )
+                                }
+                                
+                                MarkdownTextV2(
+                                    content = message.content,
+                                    animate = animate
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // === USER SIDE (БЕЗ аватара!) ===
+            if (isUser) {
+                // Bubble с салатовым/мятным градиентом
+                Box(
+                    modifier = Modifier
+                        .widthIn(max = maxBubbleWidth)
+                        .shadow(2.dp, bubbleShape, spotColor = Color.Black.copy(alpha = 0.25f))
+                        .clip(bubbleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF00C896),  // Мятный/салатовый
+                                    Color(0xFF00A67E)   // Тёмнее
+                                )
+                            ),
+                            bubbleShape
+                        )
+                        .border(1.dp, Color(0xFF00E0A8).copy(alpha = 0.3f), bubbleShape)
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = formattedText,
+                        style = GlassTypography.messageText.copy(fontSize = 14.sp),
+                        color = Color.White
+                    )
+                }
+                // БЕЗ аватара юзера!
+            }
+        }
+        
+        // === TIMESTAMP ===
+        if (isLastInGroup) {
+            Spacer(Modifier.height(2.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = if (!isUser) 34.dp else 0.dp),
+                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = timestamp,
+                    style = GlassTypography.timestamp.copy(fontSize = 10.sp)
+                )
+                
+                if (isUser && status != null) {
+                    Spacer(Modifier.width(3.dp))
+                    when (status) {
+                        MessageSendStatus.Sending -> Text("○", style = GlassTypography.timestamp.copy(fontSize = 10.sp))
+                        MessageSendStatus.Sent -> Text("✓✓", style = GlassTypography.timestamp.copy(fontSize = 10.sp, color = GlassColors.mint))
+                        MessageSendStatus.Failed -> Text("✗", style = GlassTypography.timestamp.copy(fontSize = 10.sp, color = GlassColors.error))
+                    }
+                }
+            }
+        }
+        
+        // === ERROR + RETRY ===
+        if (isUser && status == MessageSendStatus.Failed) {
+            Spacer(Modifier.height(2.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Не отправлено", style = GlassTypography.timestamp.copy(color = GlassColors.error))
+                Spacer(Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(GlassColors.error.copy(alpha = 0.15f))
+                        .clickable { onRetry() }
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text("Повторить", style = GlassTypography.timestamp.copy(color = GlassColors.error))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Blueberry Avatar V2 — компактный
+ */
+@Composable
+private fun BlueberryAvatarV2(size: Dp = 28.dp) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF6366F1),
+                        Color(0xFF8B5CF6)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "🫐",
+            fontSize = (size.value * 0.5f).sp
+        )
+    }
+}
+
+/**
+ * Markdown Text V2 — простой рендерер без внешних библиотек
+ * Поддерживает: жирный, курсив, код, списки, таблицы (базово)
+ * 
+ * Анимация: плавное появление символов по мере стриминга
+ * visibleChars догоняет content.length, не сбрасывается при обновлении
+ */
+@Composable
+private fun MarkdownTextV2(
+    content: String,
+    animate: Boolean = false
+) {
+    // visibleChars плавно догоняет content.length
+    // При обновлении content — visibleChars НЕ сбрасывается, а продолжает расти
+    var visibleChars by remember { mutableStateOf(if (animate) 0 else content.length) }
+    
+    // Если анимация выключена — показываем всё сразу
+    LaunchedEffect(animate, content.length) {
+        if (!animate) {
+            visibleChars = content.length
+            return@LaunchedEffect
+        }
+        
+        // Плавно догоняем content.length
+        while (visibleChars < content.length) {
+            kotlinx.coroutines.delay(12) // Быстрее для плавности
+            // Добавляем по 2-3 символа за раз для естественности
+            visibleChars = (visibleChars + 2).coerceAtMost(content.length)
+        }
+    }
+    
+    val displayText = content.take(visibleChars)
+    
+    // Парсим и рендерим markdown
+    val blocks = remember(displayText) { parseMarkdownBlocks(displayText) }
+    
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        blocks.forEach { block ->
+            when (block) {
+                is MarkdownBlock.CodeBlock -> {
+                    // Код блок со скроллом
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF1A1B26))
+                            .horizontalScroll(rememberScrollState())
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = block.code,
+                            style = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                color = Color(0xFF9ECE6A),
+                                lineHeight = 16.sp
+                            )
+                        )
+                    }
+                }
+                is MarkdownBlock.Table -> {
+                    // Таблица
+                    TableRenderer(block.rows)
+                }
+                is MarkdownBlock.Text -> {
+                    // Обычный текст с inline форматированием
+                    Text(
+                        text = parseInlineMarkdown(block.text),
+                        style = GlassTypography.messageText.copy(
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp
+                        ),
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+// === Markdown Parser ===
+
+private sealed class MarkdownBlock {
+    data class Text(val text: String) : MarkdownBlock()
+    data class CodeBlock(val language: String, val code: String) : MarkdownBlock()
+    data class Table(val rows: List<List<String>>) : MarkdownBlock()
+}
+
+private fun parseMarkdownBlocks(text: String): List<MarkdownBlock> {
+    val blocks = mutableListOf<MarkdownBlock>()
+    var remaining = text.trim()
+    
+    while (remaining.isNotEmpty()) {
+        // Код блок
+        val codeMatch = Regex("```(\\w*)\\n([\\s\\S]*?)```").find(remaining)
+        if (codeMatch != null && codeMatch.range.first == 0) {
+            blocks.add(MarkdownBlock.CodeBlock(
+                codeMatch.groupValues[1],
+                codeMatch.groupValues[2].trim()
+            ))
+            remaining = remaining.substring(codeMatch.range.last + 1).trim()
+            continue
+        }
+        
+        // Таблица (строки с |)
+        val tableMatch = Regex("^(\\|[^\\n]+\\|\\n)+").find(remaining)
+        if (tableMatch != null && tableMatch.range.first == 0) {
+            val tableText = tableMatch.value
+            val rows = tableText.lines()
+                .filter { it.isNotBlank() && !it.contains("---") }
+                .map { row ->
+                    row.split("|")
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                }
+            if (rows.isNotEmpty()) {
+                blocks.add(MarkdownBlock.Table(rows))
+            }
+            remaining = remaining.substring(tableMatch.range.last + 1).trim()
+            continue
+        }
+        
+        // Обычный текст до следующего блока
+        val nextBlockStart = listOf(
+            remaining.indexOf("```"),
+            remaining.indexOf("\n|")
+        ).filter { it > 0 }.minOrNull() ?: remaining.length
+        
+        val textPart = remaining.substring(0, nextBlockStart).trim()
+        if (textPart.isNotEmpty()) {
+            blocks.add(MarkdownBlock.Text(textPart))
+        }
+        remaining = remaining.substring(nextBlockStart).trim()
+    }
+    
+    return blocks.ifEmpty { listOf(MarkdownBlock.Text(text)) }
+}
+
+private fun parseInlineMarkdown(text: String): AnnotatedString {
+    return buildAnnotatedString {
+        var current = text
+            .replace("**", "⬛BOLD⬛")
+            .replace("*", "⬛ITALIC⬛")
+            .replace("`", "⬛CODE⬛")
+            .replace("• ", "  • ")
+            .replace(Regex("^#{1,3}\\s+", RegexOption.MULTILINE), "")
+        
+        var isBold = false
+        var isItalic = false
+        var isCode = false
+        
+        val parts = current.split("⬛")
+        parts.forEach { part ->
+            when (part) {
+                "BOLD" -> isBold = !isBold
+                "ITALIC" -> isItalic = !isItalic
+                "CODE" -> isCode = !isCode
+                else -> {
+                    val style = SpanStyle(
+                        fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+                        fontStyle = if (isItalic) FontStyle.Italic else FontStyle.Normal,
+                        fontFamily = if (isCode) FontFamily.Monospace else FontFamily.Default,
+                        background = if (isCode) Color(0xFF2D2D3D) else Color.Transparent,
+                        color = if (isCode) Color(0xFF7AA2F7) else Color.Unspecified
+                    )
+                    withStyle(style) { append(part) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TableRenderer(rows: List<List<String>>) {
+    if (rows.isEmpty()) return
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF1E2030))
+            .border(1.dp, Color(0xFF3D4560), RoundedCornerShape(8.dp))
+    ) {
+        rows.forEachIndexed { rowIndex, row ->
+            val isHeader = rowIndex == 0
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (isHeader) Modifier.background(Color(0xFF2A3050))
+                        else Modifier
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                row.forEach { cell ->
+                    Text(
+                        text = cell,
+                        modifier = Modifier.weight(1f),
+                        style = TextStyle(
+                            fontSize = 12.sp,
+                            fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isHeader) GlassColors.accent else Color.White.copy(alpha = 0.9f)
+                        ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            if (rowIndex < rows.size - 1) {
+                Divider(color = Color(0xFF3D4560).copy(alpha = 0.5f), thickness = 0.5.dp)
+            }
+        }
+    }
+}
+
+/**
+ * Typing Indicator V2 — компактный, с выравниванием TOP
+ */
+@Composable
+fun TypingIndicatorV2(
+    modifier: Modifier = Modifier,
+    isUploading: Boolean = false
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "typing")
+    
+    val bubbleShape = RoundedCornerShape(topStart = 6.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
+    
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.Top  // TOP! Как у сообщений
+    ) {
+        BlueberryAvatarV2(size = 28.dp)
+        Spacer(Modifier.width(6.dp))
+        
+        Box(
+            modifier = Modifier
+                .shadow(2.dp, bubbleShape, spotColor = Color.Black.copy(alpha = 0.2f))
+                .clip(bubbleShape)
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFF2A3352).copy(alpha = 0.95f),
+                            Color(0xFF1E2744).copy(alpha = 0.9f)
+                        )
+                    ),
+                    bubbleShape
+                )
+                .border(1.dp, Color(0xFF4A5580).copy(alpha = 0.4f), bubbleShape)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            if (isUploading) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(10.dp),
+                        strokeWidth = 1.5.dp,
+                        color = GlassColors.mint
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("Загрузка...", style = GlassTypography.timestamp.copy(color = GlassColors.textSecondary))
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    repeat(3) { index ->
+                        val dotAlpha by infiniteTransition.animateFloat(
+                            initialValue = 0.3f, targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(400, delayMillis = index * 120, easing = EaseInOutCubic),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "dot_$index"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(GlassColors.textSecondary.copy(alpha = dotAlpha))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Форматирование текста сообщения
+ */
+private fun formatMessageTextV2(raw: String): String {
+    var text = raw.trim()
+    if (text.isEmpty()) return text
+    
+    // Normalize bullets
+    text = text.replace(Regex("(?m)^\\s*[-*•]\\s+"), "• ")
+    
+    // Remove markdown headings
+    text = text.replace(Regex("(?m)^\\s*#{1,6}\\s+"), "")
+    
+    // Fix numbered lists
+    text = text.replace(Regex("(?m)^(\\d+)\\.(\\S)"), "$1. $2")
+    
+    // Collapse multiple blank lines
+    text = text.replace(Regex("(\\n\\s*){3,}"), "\n\n")
+    
+    // Remove markdown emphasis
+    text = text.replace("*", "").replace("_", "")
+    
+    return text.trim()
+}
+
+/**
+ * Карточка для сгенерированного изображения в чате
+ * Без подкладки - края фото = края блока
+ * С кнопкой скачивания
+ */
+@Composable
+private fun GeneratedImageCard(
+    imageUrl: String,
+    authToken: String? = null,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var showDownloadButton by remember { mutableStateOf(false) }
+    
+    // Construct full URL if relative path
+    val fullUrl = remember(imageUrl) {
+        when {
+            imageUrl.startsWith("http://") || imageUrl.startsWith("https://") -> imageUrl
+            imageUrl.startsWith("/") -> "$API_HOST$imageUrl"
+            else -> "$API_HOST/$imageUrl"
+        }.also {
+            Timber.d("GeneratedImageCard: Original URL=$imageUrl, Full URL=$it")
+        }
+    }
+    
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.Transparent)
+            .clickable { showDownloadButton = !showDownloadButton }
+    ) {
+        // Картинка со скруглёнными углами, без фона
+        SubcomposeAsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(fullUrl)
+                .crossfade(400)
+                .apply {
+                    if (!authToken.isNullOrBlank()) {
+                        setHeader("Authorization", "Bearer $authToken")
+                    }
+                }
+                .build(),
+            contentDescription = "Сгенерированное изображение",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.FillWidth,
+            loading = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                ) {
+                    ImageGeneratingAnimation()
+                }
+            },
+            error = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF1A1A2E)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("⚠️", fontSize = 28.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Не удалось загрузить",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        )
+        
+        // Кнопка скачивания — появляется по тапу
+        AnimatedVisibility(
+            visible = showDownloadButton,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable {
+                        downloadImage(context, fullUrl, authToken)
+                        showDownloadButton = false
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Download,
+                    contentDescription = "Скачать",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Скачивает изображение в галерею
+ * Файл сохраняется в Pictures и появляется в галерее Android
+ */
+private fun downloadImage(context: android.content.Context, url: String, authToken: String?) {
+    try {
+        val fileName = "AI_Image_${System.currentTimeMillis()}.png"
+        
+        val request = android.app.DownloadManager.Request(android.net.Uri.parse(url))
+            .setTitle("Сгенерированное изображение")
+            .setDescription("Сохранение в галерею...")
+            .setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalPublicDir(
+                android.os.Environment.DIRECTORY_PICTURES,
+                fileName
+            )
+            .setAllowedOverMetered(true)
+            .setAllowedOverRoaming(true)
+            .setMimeType("image/png")  // Важно для галереи!
+        
+        // Добавляем авторизацию если есть
+        if (!authToken.isNullOrBlank()) {
+            request.addRequestHeader("Authorization", "Bearer $authToken")
+        }
+        
+        val downloadManager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager
+        downloadManager.enqueue(request)
+        
+        android.widget.Toast.makeText(context, "💾 Сохраняю в галерею...", android.widget.Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to download image")
+        android.widget.Toast.makeText(context, "Ошибка сохранения", android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+
+// ImageLoadingAnimation удалена - используем ImageGeneratingAnimation вместо неё
+
+/**
+ * Красивая анимация генерации изображения
+ * Минималистичный дизайн с вращающимся кольцом
+ */
+@Composable
+fun ImageGeneratingAnimation(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "imageGen")
+    
+    // Shimmer движение - медленнее
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer"
+    )
+    
+    // Пульсация - в 3 раза медленнее (800 -> 2400)
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+    
+    // Вращение градиента - медленное
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+    
+    // Прогресс для точек
+    val dotsProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "dots"
+    )
+    
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(16.dp))
+            .graphicsLayer { scaleX = pulse; scaleY = pulse }
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF0F1117),
+                        Color(0xFF1A1F2E),
+                        Color(0xFF0F1117)
+                    ),
+                    start = androidx.compose.ui.geometry.Offset(
+                        shimmerOffset * 500f,
+                        shimmerOffset * 500f
+                    ),
+                    end = androidx.compose.ui.geometry.Offset(
+                        (shimmerOffset + 1f) * 500f,
+                        (shimmerOffset + 1f) * 500f
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        // Вращающееся кольцо градиента
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .graphicsLayer { rotationZ = rotation }
+                .background(
+                    Brush.sweepGradient(
+                        colors = listOf(
+                            Color(0xFF6366F1).copy(alpha = 0.6f),
+                            Color(0xFF8B5CF6).copy(alpha = 0.1f),
+                            Color(0xFFEC4899).copy(alpha = 0.4f),
+                            Color(0xFF6366F1).copy(alpha = 0.1f),
+                            Color(0xFF6366F1).copy(alpha = 0.6f)
+                        )
+                    ),
+                    CircleShape
+                )
+        )
+        
+        // Внутренний круг - чистый, без эмодзи
+        Box(
+            modifier = Modifier
+                .size(70.dp)
+                .background(Color(0xFF0F1117), CircleShape)
+        )
+        
+        // Текст снизу
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Создаю изображение",
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(Modifier.height(8.dp))
+            
+            // Анимированные точки
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                repeat(3) { index ->
+                    val dotAlpha = when {
+                        dotsProgress < 0.33f -> if (index == 0) 1f else 0.3f
+                        dotsProgress < 0.66f -> if (index <= 1) 1f else 0.3f
+                        else -> 1f
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .background(
+                                Color(0xFF8B5CF6).copy(alpha = dotAlpha),
+                                CircleShape
+                            )
+                    )
+                }
+            }
+        }
+    }
+}

@@ -97,25 +97,25 @@ fun NavGraph(
         containerColor = Color.Transparent,
         bottomBar = {
             if (showBottomBar) {
-                // Unified Premium Navigation Bar
+                // Glass Navigation Bar - полупрозрачная как стекло
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(26.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(Color(0xFF0D1117).copy(alpha = 0.75f)) // Тёмное стекло
                         .border(
-                            1.dp,
-                            Color.White.copy(alpha = 0.12f),
-                            RoundedCornerShape(26.dp)
+                            0.5.dp,
+                            Color.White.copy(alpha = 0.08f),
+                            RoundedCornerShape(28.dp)
                         )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -129,10 +129,10 @@ fun NavGraph(
                                     .weight(1f)
                                     .fillMaxHeight()
                                     .padding(horizontal = 2.dp)
-                                    .clip(RoundedCornerShape(22.dp))
+                                    .clip(RoundedCornerShape(20.dp))
                                     .then(
                                         if (isSelected) Modifier.background(
-                                            GlassTheme.accentPrimary.copy(alpha = 0.15f)
+                                            GlassTheme.accentPrimary.copy(alpha = 0.2f)
                                         ) else Modifier
                                     )
                                     .clickable {
@@ -156,8 +156,8 @@ fun NavGraph(
                                         tint = if (isSelected) 
                                             GlassTheme.accentPrimary 
                                         else 
-                                            Color.White.copy(alpha = 0.5f),
-                                        modifier = Modifier.size(20.dp)
+                                            Color.White.copy(alpha = 0.45f),
+                                        modifier = Modifier.size(22.dp)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
@@ -166,9 +166,9 @@ fun NavGraph(
                                         color = if (isSelected) 
                                             GlassTheme.accentPrimary 
                                         else 
-                                            Color.White.copy(alpha = 0.5f),
+                                            Color.White.copy(alpha = 0.45f),
                                         maxLines = 1,
-                                        fontSize = 9.sp
+                                        fontSize = 10.sp
                                     )
                                 }
                             }

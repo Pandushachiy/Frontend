@@ -34,4 +34,7 @@
     <color name="glass_light">#1AFFFFFF</color>
     <color name="glass_dark">#1A000000</color>
     <color name="glass_border">#33FFFFFF</color>
+    
+    <!-- Splash Screen -->
+    <color name="splash_background">#0D1117</color>
 </resources>

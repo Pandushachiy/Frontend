@@ -128,7 +128,8 @@ data class MessageDTO(
     val model_used: String? = null,
     val tokens_used: Int? = null,
     val processing_time: Int? = null,
-    val created_at: String
+    val created_at: String,
+    val imageUrl: String? = null  // URL сгенерированной картинки
 )
 
 @Serializable

@@ -15,6 +15,7 @@
     <color name="primary_light">#5FD4E0</color>
     <color name="secondary">#5E5240</color>
     <color name="secondary_light">#8A7B65</color>
+    <color name="splash_background">#0D1117</color>
     <color name="success">#4CAF50</color>
     <color name="surface_dark">#262828</color>
     <color name="surface_light">#FFFFFF</color>
@@ -62,9 +63,12 @@
     <string name="stress_level">Stress Level</string>
     <string name="take_photo">Take Photo</string>
     <string name="upload_document">Upload Document</string>
-    <style name="Theme.HealthCompanion" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.HealthCompanion" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:colorBackground">@color/splash_background</item>
     </style>
 </resources>

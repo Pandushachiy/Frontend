@@ -63,7 +63,7 @@ class DocumentRepositoryImpl @Inject constructor(
                 DocumentEntity(
                     id = response.id,
                     filename = response.filename,
-                    documentType = response.mime_type ?: "unknown",
+                    documentType = response.mimeType ?: "unknown",
                     status = response.status ?: "uploaded",
                     filePath = file.absolutePath
                 )
@@ -120,7 +120,7 @@ class DocumentRepositoryImpl @Inject constructor(
                 DocumentEntity(
                     id = response.id,
                     filename = response.filename,
-                    documentType = response.mime_type ?: mimeType,
+                    documentType = response.mimeType ?: mimeType,
                     status = response.status ?: "uploaded",
                     filePath = uri.toString()
                 )

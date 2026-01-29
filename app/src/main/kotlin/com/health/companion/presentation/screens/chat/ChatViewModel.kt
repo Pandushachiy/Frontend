@@ -12,6 +12,7 @@ import com.health.companion.data.repositories.ChatRepository
 import com.health.companion.data.repositories.DocumentRepository
 import com.health.companion.data.repositories.VoiceRepository
 import com.health.companion.ml.voice.VoiceInputManager
+import com.health.companion.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -47,6 +48,7 @@ class ChatViewModel @Inject constructor(
     private val documentRepository: DocumentRepository,
     private val voiceInputManager: VoiceInputManager,
     private val voiceRepository: VoiceRepository,
+    private val tokenManager: TokenManager,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -93,6 +95,10 @@ class ChatViewModel @Inject constructor(
     
     private val _isStreaming = MutableStateFlow(false)
     val isStreaming: StateFlow<Boolean> = _isStreaming.asStateFlow()
+    
+    // Auth token for image requests
+    private val _authToken = MutableStateFlow<String?>(null)
+    val authToken: StateFlow<String?> = _authToken.asStateFlow()
 
     private val _conversations = MutableStateFlow<List<ConversationEntity>>(emptyList())
     val conversations: StateFlow<List<ConversationEntity>> = _conversations.asStateFlow()
@@ -105,6 +111,7 @@ class ChatViewModel @Inject constructor(
         observeConversations()
         loadRemoteConversations()
         observeCurrentConversationMessages()
+        loadAuthToken()
         setupWebSocket()
         setupVoiceInput()
     }
@@ -146,6 +153,13 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun loadAuthToken() {
+        viewModelScope.launch {
+            _authToken.value = tokenManager.getAccessToken()
+            Timber.d("ChatViewModel: Auth token loaded = ${_authToken.value?.take(20)}...")
+        }
+    }
+    
     private fun observeConversations() {
         viewModelScope.launch {
             chatRepository.getLocalConversationsFlow()
@@ -227,12 +241,14 @@ class ChatViewModel @Inject constructor(
                 val streamingMessageId = UUID.randomUUID().toString()
                 val contentBuilder = StringBuilder()
                 var messageAdded = false
+                var currentImageUrl: String? = null
                 
                 // SSE streaming - just accumulate text, animation is in Composable
                 chatRepository.sendMessageStream(
                     message = text,
                     conversationId = _currentConversationId.value,
                     onStatus = { status ->
+                        android.util.Log.d("STREAM_DIAG", "📊 STATUS: '$status'")
                         viewModelScope.launch(Dispatchers.Main.immediate) {
                             _streamStatus.value = status
                         }
@@ -257,14 +273,55 @@ class ChatViewModel @Inject constructor(
                                     provider = null,
                                     provider_color = null,
                                     model_used = null,
-                                    created_at = System.currentTimeMillis().toString()
+                                    created_at = System.currentTimeMillis().toString(),
+                                    imageUrl = currentImageUrl
                                 )
                                 _messages.value = _messages.value + msg
                             } else {
                                 // Update content - Composable will animate
                                 _messages.value = _messages.value.map { m ->
-                                    if (m.id == streamingMessageId) m.copy(content = currentContent) else m
+                                    if (m.id == streamingMessageId) m.copy(content = currentContent, imageUrl = currentImageUrl) else m
                                 }
+                            }
+                        }
+                    },
+                    onImage = { url, prompt ->
+                        android.util.Log.d("STREAM_DIAG", "🖼️ IMAGE RECEIVED: url='$url', prompt='$prompt'")
+                        Timber.d("🖼️ IMAGE EVENT: url=$url, prompt=$prompt")
+                        
+                        // Ensure we have a valid URL
+                        val fullUrl = when {
+                            url.startsWith("http") -> url
+                            url.startsWith("/") -> "http://46.17.99.76:8000$url"
+                            else -> "http://46.17.99.76:8000/$url"
+                        }
+                        android.util.Log.d("STREAM_DIAG", "🖼️ FULL URL: $fullUrl")
+                        currentImageUrl = fullUrl
+                        
+                        viewModelScope.launch(Dispatchers.Main.immediate) {
+                            if (!messageAdded) {
+                                messageAdded = true
+                                _isLoading.value = false
+                                // Create message with image
+                                val msg = MessageDTO(
+                                    id = streamingMessageId,
+                                    content = "",
+                                    role = "assistant",
+                                    agent_name = "streaming",
+                                    provider = null,
+                                    provider_color = null,
+                                    model_used = null,
+                                    created_at = System.currentTimeMillis().toString(),
+                                    imageUrl = fullUrl
+                                )
+                                _messages.value = _messages.value + msg
+                                android.util.Log.d("STREAM_DIAG", "🖼️ Created message with imageUrl=$fullUrl")
+                            } else {
+                                // Update with image URL
+                                _messages.value = _messages.value.map { m ->
+                                    if (m.id == streamingMessageId) m.copy(imageUrl = fullUrl) else m
+                                }
+                                android.util.Log.d("STREAM_DIAG", "🖼️ Updated message with imageUrl=$fullUrl")
                             }
                         }
                     },

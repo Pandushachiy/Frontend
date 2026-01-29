@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.health.companion.data.remote.api.DocumentResponse
 import com.health.companion.data.repositories.DocumentRepository
+import com.health.companion.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -29,6 +30,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DocumentsViewModel @Inject constructor(
     private val documentRepository: DocumentRepository,
+    private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -40,6 +42,9 @@ class DocumentsViewModel @Inject constructor(
 
     private val _isUploading = MutableStateFlow(false)
     val isUploading: StateFlow<Boolean> = _isUploading.asStateFlow()
+
+    private val _authToken = MutableStateFlow<String?>(null)
+    val authToken: StateFlow<String?> = _authToken.asStateFlow()
 
     private var pendingPhotoUri: Uri? = null
     private var pendingPhotoFile: File? = null
@@ -53,6 +58,13 @@ class DocumentsViewModel @Inject constructor(
 
     init {
         loadDocuments()
+        loadAuthToken()
+    }
+
+    private fun loadAuthToken() {
+        viewModelScope.launch {
+            _authToken.value = tokenManager.getAccessToken()
+        }
     }
 
     private fun loadDocuments() {
@@ -318,7 +330,7 @@ class DocumentsViewModel @Inject constructor(
     fun shouldShowReady(document: DocumentResponse, now: Long): Boolean {
         val status = document.status?.lowercase() ?: return false
         if (status != "processed") return false
-        val baseTime = localUploadTimes[document.id] ?: parseInstant(document.uploaded_at)
+        val baseTime = localUploadTimes[document.id] ?: parseInstant(document.uploadedAt)
         if (baseTime == null) return false
         val diff = now - baseTime
         val fiveMinutes = 5 * 60 * 1000L
@@ -329,7 +341,7 @@ class DocumentsViewModel @Inject constructor(
     private fun ensureUploadTimes(docs: List<DocumentResponse>) {
         docs.forEach { doc ->
             if (!localUploadTimes.containsKey(doc.id)) {
-                parseInstant(doc.uploaded_at)?.let { localUploadTimes[doc.id] = it }
+                parseInstant(doc.uploadedAt)?.let { localUploadTimes[doc.id] = it }
             }
         }
     }

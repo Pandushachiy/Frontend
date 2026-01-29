@@ -2,6 +2,7 @@ package com.health.companion.presentation.screens.documents;
 
 import android.content.Context;
 import com.health.companion.data.repositories.DocumentRepository;
+import com.health.companion.utils.TokenManager;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -25,26 +26,30 @@ import javax.inject.Provider;
 public final class DocumentsViewModel_Factory implements Factory<DocumentsViewModel> {
   private final Provider<DocumentRepository> documentRepositoryProvider;
 
+  private final Provider<TokenManager> tokenManagerProvider;
+
   private final Provider<Context> contextProvider;
 
   public DocumentsViewModel_Factory(Provider<DocumentRepository> documentRepositoryProvider,
-      Provider<Context> contextProvider) {
+      Provider<TokenManager> tokenManagerProvider, Provider<Context> contextProvider) {
     this.documentRepositoryProvider = documentRepositoryProvider;
+    this.tokenManagerProvider = tokenManagerProvider;
     this.contextProvider = contextProvider;
   }
 
   @Override
   public DocumentsViewModel get() {
-    return newInstance(documentRepositoryProvider.get(), contextProvider.get());
+    return newInstance(documentRepositoryProvider.get(), tokenManagerProvider.get(), contextProvider.get());
   }
 
   public static DocumentsViewModel_Factory create(
-      Provider<DocumentRepository> documentRepositoryProvider, Provider<Context> contextProvider) {
-    return new DocumentsViewModel_Factory(documentRepositoryProvider, contextProvider);
+      Provider<DocumentRepository> documentRepositoryProvider,
+      Provider<TokenManager> tokenManagerProvider, Provider<Context> contextProvider) {
+    return new DocumentsViewModel_Factory(documentRepositoryProvider, tokenManagerProvider, contextProvider);
   }
 
   public static DocumentsViewModel newInstance(DocumentRepository documentRepository,
-      Context context) {
-    return new DocumentsViewModel(documentRepository, context);
+      TokenManager tokenManager, Context context) {
+    return new DocumentsViewModel(documentRepository, tokenManager, context);
   }
 }

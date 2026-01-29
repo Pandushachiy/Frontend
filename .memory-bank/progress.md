@@ -57,3 +57,40 @@
 - `ChatViewModel.kt`
 - `ChatScreen.kt`
 - `ChatRepository.kt`
+
+---
+
+## [2026-01-29] Image Generation & Streaming Fixes
+
+### Что сделано:
+- ✅ **Исправлен просмотр документов** — `setHeader` вместо `addHeader` для авторизации Coil
+- ✅ **Плавный стриминг** — символы появляются равномерно, без рывков
+- ✅ **Анимация генерации сразу** — детекция по ключевым словам ("сгенерируй", "нарисуй")
+- ✅ **Картинки без подложки** — убран bubble-фон, только изображение со скруглёнными углами
+- ✅ **Скачивание в галерею** — тап на картинку → кнопка скачивания → сохранение в Pictures
+
+### Ключевые изменения:
+```kotlin
+// Детекция запроса генерации (ChatScreen.kt)
+val isImageRequest = lastUserMsg.contains("сгенерируй") || 
+                     lastUserMsg.contains("нарисуй") || ...
+
+// Скачивание (ChatBubbleV2.kt)
+DownloadManager.Request(uri)
+    .setMimeType("image/png")  // Важно для галереи!
+    .setDestinationInExternalPublicDir(DIRECTORY_PICTURES, fileName)
+```
+
+### Файлы:
+- `ChatScreen.kt` — анимация генерации сразу
+- `ChatBubbleV2.kt` — картинки без фона, скачивание
+- `ChatViewModel.kt` — логирование статусов
+- `DocumentsScreen.kt` — исправлен просмотр
+
+---
+
+## [TODO] Image-to-Image & Session Attachments
+
+### Backend готов, нужно на фронте:
+1. **Image-to-Image** — прикрепление фото к сообщению + `images: [base64]`
+2. **Session Attachments** — панель вложений сессии, drag & drop

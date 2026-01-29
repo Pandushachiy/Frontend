@@ -52,6 +52,7 @@ interface ChatRepository {
         conversationId: String?,
         onStatus: (String) -> Unit,
         onToken: (String) -> Unit,
+        onImage: (url: String, prompt: String) -> Unit,
         onDone: (messageId: String, fullContent: String, newConversationId: String?) -> Unit,
         onError: (String) -> Unit
     )
@@ -215,6 +216,7 @@ class ChatRepositoryImpl @Inject constructor(
         conversationId: String?,
         onStatus: (String) -> Unit,
         onToken: (String) -> Unit,
+        onImage: (url: String, prompt: String) -> Unit,
         onDone: (messageId: String, fullContent: String, newConversationId: String?) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -276,10 +278,29 @@ class ChatRepositoryImpl @Inject constructor(
                                 val content = json.optString("content")
                                 onToken(content)
                             }
+                            "image" -> {
+                                val url = json.optString("url")
+                                val prompt = json.optString("prompt")
+                                Timber.d("SSE image event received: url=$url, prompt=$prompt")
+                                android.util.Log.d("SSE_IMAGE", "IMAGE EVENT: url=$url, prompt=$prompt")
+                                if (url.isNotBlank()) {
+                                    onImage(url, prompt)
+                                } else {
+                                    Timber.w("SSE image: URL is empty!")
+                                }
+                            }
                             "done" -> {
                                 val messageId = json.optString("message_id")
                                 val fullContent = json.optString("full_content")
                                 val newConvId = json.optString("conversation_id").takeIf { it.isNotBlank() }
+                                val imageUrl = json.optString("image_url").takeIf { it.isNotBlank() }
+                                Timber.d("SSE done raw: messageId=$messageId, content=${fullContent.take(100)}, imageUrl=$imageUrl")
+                                
+                                // If there's an image URL in done, call onImage
+                                if (imageUrl != null) {
+                                    Timber.d("SSE done contains image URL: $imageUrl")
+                                    onImage(imageUrl, "")
+                                }
                                 
                                 // Save to DB in background
                                 CoroutineScope(Dispatchers.IO).launch {

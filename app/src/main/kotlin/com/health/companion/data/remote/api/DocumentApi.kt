@@ -38,16 +38,21 @@ interface DocumentApi {
 data class DocumentResponse(
     val id: String,
     val filename: String,
-    val file_size: Long? = null,
-    val mime_type: String? = null,
-    val document_type: String? = null,
+    // All fields now in camelCase (backend change 28.01.2026)
+    val smartTitle: String? = null,
+    val thumbnailUrl: String? = null,
+    val previewUrl: String? = null,
+    val downloadUrl: String? = null,
+    val fileSize: Long? = null,
+    val mimeType: String? = null,
+    val documentType: String? = null,
     val status: String? = null,
     val description: String? = null,
     val summary: String? = null,
-    val extracted_entities: ExtractedEntities? = null,
-    val error_message: String? = null,
-    val uploaded_at: String? = null,
-    val processed_at: String? = null
+    val extractedEntities: ExtractedEntities? = null,
+    val errorMessage: String? = null,
+    val uploadedAt: String? = null,
+    val processedAt: String? = null
 )
 
 @Serializable
@@ -55,12 +60,12 @@ data class ExtractedEntities(
     val objects: List<String> = emptyList(),
     val colors: List<String> = emptyList(),
     val people: List<String> = emptyList(),
-    val is_document: Boolean? = null,
-    val is_photo: Boolean? = null,
+    val isDocument: Boolean? = null,
+    val isPhoto: Boolean? = null,
     val mood: String? = null,
-    val ocr_text: String? = null,
-    val kg_entities: List<String> = emptyList(),
-    val kg_relations: Int? = null
+    val ocrText: String? = null,
+    val kgEntities: List<String> = emptyList(),
+    val kgRelations: Int? = null
 )
 
 @Serializable

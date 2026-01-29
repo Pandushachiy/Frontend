@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -68,7 +69,7 @@ import androidx.core.content.FileProvider
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.health.companion.data.remote.api.MessageDTO
-import com.health.companion.presentation.components.GlassTheme
+import com.health.companion.presentation.components.*
 import com.health.companion.utils.VoiceEventLogger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -103,6 +104,7 @@ fun ChatScreen(
     val isStreaming by viewModel.isStreaming.collectAsState()
     val currentConversationId by viewModel.currentConversationId.collectAsState()
     val messageSendStatus by viewModel.messageSendStatus.collectAsState()
+    val authToken by viewModel.authToken.collectAsState()
 
     // Telegram-style: reverseLayout = true, scroll to 0 = bottom
     val listState = rememberLazyListState()
@@ -573,7 +575,7 @@ fun ChatScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(GlassTheme.backgroundGradient)
+            .background(GlassGradients.backgroundVertical)
             .padding(bottom = effectiveBottom)
     ) {
         Column(
@@ -595,25 +597,106 @@ fun ChatScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Loading indicator - only show when waiting for response, not during typing animation
-                if (isLoading || isUploading) {
-                    item { TypingIndicator(isUploading, streamStatus) }
+                // Image generation animation - показываем при генерации картинки
+                // Детектим запрос на генерацию по ключевым словам в последнем сообщении юзера
+                val lastUserMsg = messages.lastOrNull { it.role == "user" }?.content?.lowercase() ?: ""
+                val isImageRequest = lastUserMsg.contains("сгенерируй") ||
+                                     lastUserMsg.contains("нарисуй") ||
+                                     lastUserMsg.contains("создай картинку") ||
+                                     lastUserMsg.contains("создай изображение") ||
+                                     lastUserMsg.contains("generate") ||
+                                     lastUserMsg.contains("draw")
+                
+                val lastMsgImageUrl = messages.lastOrNull()?.imageUrl
+                val lastMsgAgent = messages.lastOrNull()?.agent_name
+                
+                // Показываем анимацию генерации если:
+                // 1. Бэк прислал статус генерации
+                // 2. ИЛИ это запрос на генерацию и идёт загрузка (сразу показываем!)
+                // 3. ИЛИ есть imageUrl в процессе стриминга
+                val isGeneratingImage = streamStatus == "generating_image" ||
+                                        streamStatus == "generating" ||
+                                        streamStatus.contains("image", ignoreCase = true) ||
+                                        streamStatus.contains("generat", ignoreCase = true) ||
+                                        // Сразу показываем анимацию для запросов генерации
+                                        (isLoading && isImageRequest) ||
+                                        // Также проверяем есть ли сообщение с imageUrl в процессе загрузки
+                                        (isStreaming && lastMsgImageUrl != null && lastMsgAgent == "streaming")
+                
+                if (isGeneratingImage) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            // AI Avatar
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFF6366F1),
+                                                Color(0xFF8B5CF6)
+                                            )
+                                        ),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("✨", fontSize = 16.sp)
+                            }
+                            
+                            Spacer(Modifier.width(8.dp))
+                            
+                            // Animation card
+                            ImageGeneratingAnimation(
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                        }
+                    }
+                }
+                
+                // Loading indicator - only show when NOT generating image
+                if ((isLoading || isUploading) && !isGeneratingImage) {
+                    item { 
+                        TypingIndicatorV2(
+                            modifier = Modifier.padding(vertical = GlassSpacing.betweenBubbleGroups),
+                            isUploading = isUploading
+                        )
+                    }
                 }
 
-                // Messages (reversed order for reverseLayout)
+                // Messages (reversed order for reverseLayout) with proper grouping
                 itemsIndexed(reversedMessages, key = { _, message -> message.id }) { index, message ->
-                    val next = reversedMessages.getOrNull(index + 1)
-                    val isGrouped = next?.role == message.role
+                    val prev = reversedMessages.getOrNull(index - 1) // визуально выше (т.к. reversed)
+                    val next = reversedMessages.getOrNull(index + 1) // визуально ниже
+                    
+                    // Группировка: первый в группе = нет предыдущего с тем же role
+                    // Последний в группе = нет следующего с тем же role
+                    val isFirstInGroup = prev?.role != message.role
+                    val isLastInGroup = next?.role != message.role
+                    
+                    // Spacing по спеке: 2dp внутри группы, 12dp между группами
+                    val topPadding = when {
+                        index == 0 -> 0.dp  // Первое сообщение
+                        isFirstInGroup -> GlassSpacing.betweenBubbleGroups  // Начало новой группы
+                        else -> GlassSpacing.betweenBubblesInGroup  // Внутри группы
+                    }
                     
                     // Animate streaming messages only
                     val shouldAnimate = message.agent_name == "streaming"
                     
-                    ChatBubble(
+                    ChatBubbleV2(
                         message = message,
                         status = messageSendStatus[message.id],
-                        showAvatar = !isGrouped,
-                        modifier = Modifier.padding(top = if (isGrouped) 2.dp else 10.dp),
+                        isFirstInGroup = isFirstInGroup,
+                        isLastInGroup = isLastInGroup,
+                        modifier = Modifier.padding(top = topPadding),
                         animate = shouldAnimate,
+                        authToken = authToken,
                         onRetry = {
                             viewModel.retrySendMessage(message.id, message.content)
                         }
@@ -655,58 +738,61 @@ fun ChatScreen(
                 }
             }
 
-            // INPUT AREA - Premium unified design with proper alignment
+            // INPUT AREA - по спецификации GlassDesignSystem
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = GlassSpacing.screenEdge, vertical = 8.dp),
+                verticalAlignment = Alignment.Bottom  // Bottom align для multi-line
             ) {
-                // Chat list button - same size as mic button
+                // Chat list button
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(GlassSpacing.buttonSize + 8.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.1f))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
-                        .clickable {
-                            showChatsSheet = true
-                        },
+                        .background(GlassColors.surface.copy(alpha = 0.8f))
+                        .border(1.dp, GlassColors.whiteOverlay10, CircleShape)
+                        .clickable { showChatsSheet = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Chat,
                         contentDescription = "Чаты",
-                        tint = GlassTheme.accentPrimary,
-                        modifier = Modifier.size(20.dp)
+                        tint = GlassColors.accent,
+                        modifier = Modifier.size(GlassSpacing.iconSize)
                     )
                 }
                 
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(GlassSpacing.buttonSpacing))
 
-                // Main input container
+                // Main input container — по спеке с max 4 lines
                 Row(
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 44.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(22.dp))
+                        .heightIn(min = 48.dp)  // Минимальная высота
+                        .shadow(
+                            elevation = GlassElevation.inputField,
+                            shape = GlassShapes.inputField,
+                            spotColor = Color.Black.copy(alpha = 0.2f)
+                        )
+                        .clip(GlassShapes.inputField)
+                        .background(GlassColors.surface.copy(alpha = 0.9f), GlassShapes.inputField)
+                        .border(1.dp, GlassColors.whiteOverlay10, GlassShapes.inputField)
                         .padding(start = 4.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Attach button inside
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(GlassSpacing.buttonSize)
                             .clip(CircleShape)
                             .clickable { showAttachMenu = !showAttachMenu },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (showAttachMenu) Icons.Default.Close else Icons.Default.Add,
+                            imageVector = if (showAttachMenu) Icons.Default.Close else Icons.Default.AttachFile,
                             contentDescription = "Прикрепить",
-                            tint = GlassTheme.textSecondary,
+                            tint = GlassColors.textTertiary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -722,17 +808,18 @@ fun ChatScreen(
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
-                                .background(GlassTheme.statusError.copy(alpha = recAlpha), CircleShape)
+                                .background(GlassColors.error.copy(alpha = recAlpha), CircleShape)
                         )
                         Spacer(Modifier.width(8.dp))
                     }
 
+                    // TextField — max 4 lines по спеке
                     BasicTextField(
                         value = currentMessage,
                         onValueChange = viewModel::updateCurrentMessage,
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 36.dp, max = 100.dp)
+                            .heightIn(min = 36.dp, max = 120.dp)  // ~4 lines
                             .focusRequester(focusRequester)
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused && reversedMessages.isNotEmpty()) {
@@ -742,10 +829,9 @@ fun ChatScreen(
                                     }
                                 }
                             },
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = GlassTheme.textPrimary
-                        ),
-                        cursorBrush = SolidColor(GlassTheme.accentPrimary),
+                        textStyle = GlassTypography.messageText,
+                        cursorBrush = SolidColor(GlassColors.accent),
+                        maxLines = 4,  // MAX 4 LINES по спеке!
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.Sentences,
                             imeAction = ImeAction.Send
@@ -770,8 +856,7 @@ fun ChatScreen(
                                 if (currentMessage.isEmpty()) {
                                     Text(
                                         text = if (isRecording) "Говорите..." else "Сообщение",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = GlassTheme.textTertiary
+                                        style = GlassTypography.placeholder
                                     )
                                 }
                                 innerTextField()
@@ -780,13 +865,13 @@ fun ChatScreen(
                     )
                 }
 
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(GlassSpacing.buttonSpacing))
 
-                // Mic/Send button - same size as chat button
+                // Mic/Send button — по спеке
                 val micPulseTransition = rememberInfiniteTransition(label = "mic_pulse")
                 val micPulse by micPulseTransition.animateFloat(
                     initialValue = 1f,
-                    targetValue = 1.1f,
+                    targetValue = 1.15f,
                     animationSpec = infiniteRepeatable(
                         animation = tween(600, easing = EaseInOutCubic),
                         repeatMode = RepeatMode.Reverse
@@ -795,32 +880,43 @@ fun ChatScreen(
                 )
 
                 Box(
-                    modifier = Modifier.size(44.dp),
+                    modifier = Modifier.size(GlassSpacing.buttonSize + 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     // Pulse effect for recording
                     if (isRecording) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(GlassSpacing.buttonSize + 8.dp)
                                 .scale(micPulse)
                                 .background(
-                                    GlassTheme.statusError.copy(alpha = 0.25f),
+                                    GlassColors.error.copy(alpha = 0.3f),
                                     CircleShape
                                 )
                         )
                     }
                     
-                    // Main button
+                    // Main button с градиентом
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(GlassSpacing.buttonSize + 8.dp)
+                            .shadow(
+                                elevation = 4.dp,
+                                shape = CircleShape,
+                                spotColor = if (isRecording) GlassColors.error else GlassColors.accent
+                            )
                             .clip(CircleShape)
                             .background(
                                 when {
-                                    isRecording -> GlassTheme.statusError
-                                    else -> GlassTheme.accentPrimary
-                                }
+                                    isRecording -> Brush.linearGradient(
+                                        colors = listOf(GlassColors.error, GlassColors.coral)
+                                    )
+                                    currentMessage.isNotBlank() -> GlassGradients.accent
+                                    else -> Brush.linearGradient(
+                                        colors = listOf(GlassColors.accent, GlassColors.accentSecondary)
+                                    )
+                                },
+                                CircleShape
                             )
                             .clickable(enabled = !isLoading || currentMessage.isBlank()) {
                                 if (currentMessage.isNotBlank()) {
@@ -854,7 +950,7 @@ fun ChatScreen(
                             isLoading && currentMessage.isNotBlank() -> {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    color = Color.White,
+                                    color = GlassColors.textPrimary,
                                     strokeWidth = 2.dp
                                 )
                             }
@@ -862,7 +958,7 @@ fun ChatScreen(
                                 Icon(
                                     Icons.Default.Stop,
                                     "Стоп",
-                                    tint = Color.White,
+                                    tint = GlassColors.textPrimary,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -870,7 +966,7 @@ fun ChatScreen(
                                 Icon(
                                     Icons.AutoMirrored.Filled.Send,
                                     "Отправить",
-                                    tint = Color.White,
+                                    tint = GlassColors.textPrimary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -878,7 +974,7 @@ fun ChatScreen(
                                 Icon(
                                     Icons.Default.Mic,
                                     "Голос",
-                                    tint = Color.White,
+                                    tint = GlassColors.textPrimary,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -887,15 +983,19 @@ fun ChatScreen(
                 }
             }
             
-            // Attach menu above input
+            // Attach menu — по спеке с гласс-эффектом
             if (showAttachMenu) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = GlassSpacing.screenEdge, vertical = 8.dp)
+                        .clip(GlassShapes.medium)
+                        .background(GlassColors.surface.copy(alpha = 0.8f))
+                        .border(1.dp, GlassColors.whiteOverlay10, GlassShapes.medium)
+                        .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    AttachOption(Icons.Default.CameraAlt, "Камера", GlassTheme.accentPrimary) {
+                    AttachOptionV2(Icons.Default.CameraAlt, "Камера", GlassColors.teal) {
                         if (hasCameraPermission) {
                             photoUri = createPhotoUri()
                             takePictureLauncher.launch(photoUri!!)
@@ -903,10 +1003,10 @@ fun ChatScreen(
                             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     }
-                    AttachOption(Icons.Default.Image, "Фото", GlassTheme.accentSecondary) {
+                    AttachOptionV2(Icons.Default.Image, "Галерея", GlassColors.accent) {
                         pickImageLauncher.launch("image/*")
                     }
-                    AttachOption(Icons.Default.Description, "Файл", GlassTheme.accentTertiary) {
+                    AttachOptionV2(Icons.Default.Description, "Файл", GlassColors.orange) {
                         pickFileLauncher.launch(arrayOf(
                             "application/pdf",
                             "application/msword",
@@ -945,17 +1045,37 @@ fun ChatScreen(
 }
 
 @Composable
-private fun AttachOption(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
-        FilledIconButton(
-            onClick = onClick,
-            modifier = Modifier.size(56.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(containerColor = color.copy(alpha = 0.15f))
+private fun AttachOptionV2(
+    icon: androidx.compose.ui.graphics.vector.ImageVector, 
+    label: String, 
+    color: Color, 
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(GlassShapes.medium)
+                .background(color.copy(alpha = 0.15f))
+                .border(1.dp, color.copy(alpha = 0.3f), GlassShapes.medium)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center
         ) {
-            Icon(icon, label, tint = color, modifier = Modifier.size(28.dp))
+            Icon(
+                icon, 
+                contentDescription = label, 
+                tint = color, 
+                modifier = Modifier.size(24.dp)
+            )
         }
-        Spacer(Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label, 
+            style = GlassTypography.labelSmall
+        )
     }
 }
 
