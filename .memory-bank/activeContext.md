@@ -7,7 +7,7 @@
 - **Синхрон:** GET /api/v1/shared/context?source=backend
 - **Статус:** ✅ Работает
 
-## Текущие задачи
+## ✅ Завершённые задачи
 - [x] Memory Bank Setup
 - [x] Синхронизация с Backend AI
 - [x] Мультивыбор фото в галерее (Documents)
@@ -20,29 +20,46 @@
 - [x] Image-to-Image анимация трансформации
 - [x] Удаление сообщений из чата
 - [x] Wellness модуль (Mood, Habits, Digest)
-- [x] **NEW:** Life Context модуль (Профиль, Анкета, Даты, Люди)
-- [x] **NEW:** Medical Assistant модуль (Симптомы, Лекарства, Анализы)
+- [x] Life Context модуль (Профиль, Анкета, Даты, Люди)
+- [x] Medical Assistant модуль (Симптомы, Лекарства, Анализы)
+- [x] Аудит и очистка неиспользуемых файлов
+
+## 🔄 В работе
 - [ ] Session Attachments (контекст сессии)
+- [ ] Dashboard виджеты интеграция
 
-## 🆕 Новые модули (30.01.2026)
+## 📁 Структура экранов
 
-### Life Context (`/api/v1/life-context/`)
-- `GET /questionnaire` — Получить анкету профиля
-- `POST /questionnaire` — Сохранить ответы анкеты
-- `GET /profile` — Получить профиль пользователя
-- `GET /important-dates` — Важные даты
-- `POST /important-dates` — Добавить дату
-- `GET /important-people` — Близкие люди
-- `POST /important-people` — Добавить человека
-- `GET /patterns` — Паттерны жизни (аналитика)
+### Навигация (Bottom Bar)
+| Tab | Экран | Route |
+|-----|-------|-------|
+| 🏠 | DashboardScreen | `dashboard` |
+| 💬 | ChatScreen | `chat` |
+| 📄 | DocumentsScreen | `documents` |
+| 🧘 | WellnessScreen | `wellness` |
+| ⚙️ | SettingsScreen | `settings` |
 
-### Medical Assistant (`/api/v1/medical/`)
-- `POST /symptoms` — Проверка симптомов (severity: low/medium/high/urgent)
-- `POST /drug-interactions` — Проверка взаимодействий лекарств
-- `POST /lab-results` — Анализ результатов анализов
-- `POST /search` — Поиск медицинской информации
-- `GET /recommendations` — Рекомендации по здоровью
-- `GET /emergency-info` — Экстренная информация (FAST тест, номера)
+### Profile Module (из Settings)
+- `ProfileScreen` — Главный экран профиля с аватаром
+- `QuestionnaireScreen` — Пошаговая анкета (6 секций)
+- `ImportantDatesScreen` — Управление важными датами
+- `ImportantPeopleScreen` — Близкие люди
+
+### Medical Module (из Settings)
+- `MedicalAssistantScreen` — Главное меню
+- `SymptomCheckerScreen` — Проверка симптомов
+- `DrugInteractionsScreen` — Взаимодействия лекарств
+- `LabResultsScreen` — Анализ результатов
+- `RecommendationsScreen` — Рекомендации
+- `EmergencyScreen` — Экстренная помощь
+
+## 🗑️ Удалённые файлы (30.01.2026)
+- `MoodScreen.kt` — заменён на WellnessScreen
+- `MoodViewModel.kt` — заменён на WellnessViewModel
+- `HealthScreen.kt` — не использовался
+- `HealthViewModel.kt` — не использовался
+- `GlassMorphismBox.kt` — не использовался
+- `GlassMorphismCard.kt` — заменён на GlassCard
 
 ## ⚠️ ЗАДАЧИ ДЛЯ BACKEND
 
@@ -59,41 +76,15 @@ DELETE /api/v1/chat/conversations/{conversationId}/messages/{messageId}
 3. НЕ включать deleted сообщения в контекст при отправке в LLM
 4. Response: `{ "status": "ok" }`
 
-Frontend вызывает этот endpoint при удалении сообщения юзером.
-
-## Последние изменения Backend (проверять синхрон!)
+## Последние изменения Backend
 - ProfileResponse: `userId` (не user_id) ✅
-- MemoryResponse: key, value, type, createdAt
-- **NEW:** Image-to-Image API — `images: [base64]` в chat request
-- **NEW:** Session Attachments API — `/api/v1/attachments/{conversationId}/`
 - **NEW:** Wellness API — `/api/v1/wellness/`
 - **NEW:** Life Context API — `/api/v1/life-context/`
 - **NEW:** Medical API — `/api/v1/medical/`
 - SSE Events: `status`, `token`, `image`, `done`, `error`
 
-## Новые экраны
-
-### Profile Module
-- `ProfileScreen` — Главный экран профиля с аватаром, статистикой
-- `QuestionnaireScreen` — Пошаговая анкета (6 секций)
-- `ImportantDatesScreen` — Управление важными датами
-- `ImportantPeopleScreen` — Управление близкими людьми
-
-### Medical Module
-- `MedicalAssistantScreen` — Главное меню медпомощника
-- `SymptomCheckerScreen` — Проверка симптомов с severity
-- `DrugInteractionsScreen` — Проверка лекарств
-- `LabResultsScreen` — Анализ результатов анализов
-- `RecommendationsScreen` — Рекомендации по здоровью
-- `EmergencyScreen` — Экстренная помощь (номера, FAST тест)
-
-## Навигация
-- Медицинский помощник доступен: Ещё → Медицинский помощник
-- Профиль доступен: Ещё → Карточка профиля
-
 ## Важные файлы
 - `app/src/main/kotlin/com/health/companion/data/remote/api/` — API клиенты
-- `app/src/main/kotlin/com/health/companion/presentation/screens/` — Compose UI
+- `app/src/main/kotlin/com/health/companion/presentation/screens/` — UI
 - `app/src/main/kotlin/com/health/companion/data/repositories/` — Репозитории
-- **NEW:** `app/src/main/kotlin/com/health/companion/presentation/screens/profile/` — Profile модуль
-- **NEW:** `app/src/main/kotlin/com/health/companion/presentation/screens/medical/` — Medical модуль
+- `app/src/main/kotlin/com/health/companion/presentation/components/` — GlassDesignSystem

@@ -2,6 +2,103 @@
 
 ---
 
+## [2026-01-30] Удаление неиспользуемых экранов
+
+**Решение:** Удалить `MoodScreen`, `HealthScreen` и связанные файлы
+
+**Причина:** 
+- Эти экраны не были подключены к навигации
+- Функционал mood теперь в `WellnessScreen`
+- Экономия ~800 строк кода
+
+**Удалённые файлы:**
+- `MoodScreen.kt`, `MoodViewModel.kt`
+- `HealthScreen.kt`, `HealthViewModel.kt`
+- `GlassMorphismBox.kt`, `GlassMorphismCard.kt`
+
+---
+
+## [2026-01-30] GlassCard вместо GlassMorphismCard
+
+**Решение:** Использовать `GlassCard` из `GlassDesignSystem.kt`
+
+**Причина:** Единая система компонентов, консистентный дизайн
+
+**Использование:**
+```kotlin
+GlassCard(modifier = Modifier.fillMaxWidth()) {
+    // content
+}
+```
+
+---
+
+## [2026-01-30] Coil с глобальным кэшем
+
+**Решение:** Единый `ImageLoader` через Hilt
+
+**Причина:** Быстрая загрузка при переключении между экранами
+
+**Реализация:**
+```kotlin
+@Module
+@InstallIn(SingletonComponent::class)
+object CoilModule {
+    @Provides @Singleton
+    fun provideImageLoader(@ApplicationContext context: Context) = 
+        ImageLoader.Builder(context)
+            .memoryCache { MemoryCache.Builder(context).maxSizePercent(0.25).build() }
+            .diskCache { DiskCache.Builder().maxSizePercent(0.05).build() }
+            .crossfade(true)
+            .build()
+}
+```
+
+---
+
+## [2026-01-30] Medical Assistant в Settings
+
+**Решение:** Доступ к Medical через Settings → Карточка
+
+**Причина:** 
+- Не перегружать bottom bar
+- Medical — специализированная функция, не повседневная
+- Wellness (ежедневное) в bottom bar, Medical (по необходимости) в настройках
+
+---
+
+## [2026-01-29] Image-to-Image анимация
+
+**Решение:** Кастомная shimmer анимация поверх фото
+
+**Причина:** Визуальная обратная связь о процессе редактирования
+
+**Реализация:**
+```kotlin
+@Composable
+fun ImageToImageAnimation(imageUri: Uri?, ...) {
+    val shimmerOffset by animateFloatAsState(...)
+    Box {
+        AsyncImage(model = imageUri, ...)
+        // shimmer gradient overlay
+    }
+}
+```
+
+---
+
+## [2026-01-28] Long-press для удаления сообщений
+
+**Решение:** Long-press → красная рамка → кнопки "Удалить" / "Отмена"
+
+**Альтернативы (отклонены):**
+- Swipe-to-delete — конфликт с жестами, сложная реализация
+- Floating action menu — менее интуитивно
+
+**Причина выбора:** Похоже на Telegram, понятно пользователю
+
+---
+
 ## [2026-01-26] SSE Streaming через OkHttp
 
 **Решение:** Использовать `okhttp3-sse` вместо Retrofit для стриминга
@@ -25,19 +122,6 @@ val streamClient = okHttpClient.newBuilder()
 3. Upsert серверные данные в Room
 
 **Причина:** Избежать дубликатов и рассинхрона
-
----
-
-## [2026-01-26] Защита от перезаписи сообщений при стриминге
-
-**Решение:** В `observeCurrentConversationMessages`:
-```kotlin
-if (messagesList.size >= _messages.value.size) {
-    _messages.value = messagesList
-}
-```
-
-**Причина:** Room Flow мог перезаписывать сообщения старыми данными во время стриминга
 
 ---
 

@@ -1961,7 +1961,7 @@ private fun BlueberryAvatar(size: Dp = 36.dp) {
         label = "avatar_rotation"
     )
     
-        Box(
+    Box(
             modifier = Modifier
             .size(size)
             .scale(scale)

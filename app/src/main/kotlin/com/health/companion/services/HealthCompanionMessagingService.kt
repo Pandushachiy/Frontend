@@ -1,14 +1,17 @@
 package com.health.companion.services
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.health.companion.MainActivity
 import timber.log.Timber
 
@@ -49,6 +52,15 @@ class HealthCompanionMessagingService : Service() {
     }
 
     fun showNotification(context: Context, title: String, body: String) {
+        // Check notification permission for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) 
+                != PackageManager.PERMISSION_GRANTED) {
+                Timber.w("POST_NOTIFICATIONS permission not granted, skipping notification")
+                return
+            }
+        }
+        
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val intent = Intent(context, MainActivity::class.java).apply {
