@@ -23,7 +23,18 @@ interface ChatApi {
     
     @DELETE("chat/conversations/{conversationId}")
     suspend fun deleteConversation(@Path("conversationId") conversationId: String): ConversationDeleteResponse
+    
+    @DELETE("chat/conversations/{conversationId}/messages/{messageId}")
+    suspend fun deleteMessage(
+        @Path("conversationId") conversationId: String,
+        @Path("messageId") messageId: String
+    ): MessageDeleteResponse
 }
+
+@Serializable
+data class MessageDeleteResponse(
+    val status: String = "ok"
+)
 
 @Serializable
 data class ConversationsResponse(
@@ -129,7 +140,8 @@ data class MessageDTO(
     val tokens_used: Int? = null,
     val processing_time: Int? = null,
     val created_at: String,
-    val imageUrl: String? = null  // URL сгенерированной картинки
+    val imageUrl: String? = null,  // URL сгенерированной картинки от AI
+    val images: List<String>? = null  // Прикреплённые пользователем изображения (uri/base64)
 )
 
 @Serializable

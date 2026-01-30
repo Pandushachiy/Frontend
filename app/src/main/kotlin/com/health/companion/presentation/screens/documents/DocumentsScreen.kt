@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -42,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -104,6 +108,7 @@ fun DocumentsScreen(
     val isUploading by viewModel.isUploading.collectAsState()
     val displayNames by viewModel.displayNames.collectAsState()
     val authToken by viewModel.authToken.collectAsState()
+    val pendingUploads by viewModel.pendingUploads.collectAsState()
     val now by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
             delay(30_000)
@@ -158,10 +163,19 @@ fun DocumentsScreen(
         }
     }
 
+    // Используем тот же фон что и в чате
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(GlassTheme.backgroundGradient)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF0A0E27),
+                        Color(0xFF0D1229),
+                        Color(0xFF0A0E27)
+                    )
+                )
+            )
     ) {
         Column(
             modifier = Modifier
@@ -256,10 +270,43 @@ fun DocumentsScreen(
                     }
                     else -> {
                         val context = LocalContext.current
+                        val listState = rememberLazyListState()
+                        val coroutineScope = rememberCoroutineScope()
+                        
+                        // Отслеживаем какой элемент сейчас раскрыт для удаления
+                        var currentRevealedId by remember { mutableStateOf<String?>(null) }
+                        
+                        // Скролл вверх при появлении новых загрузок
+                        LaunchedEffect(pendingUploads.size) {
+                            if (pendingUploads.isNotEmpty()) {
+                                listState.animateScrollToItem(0)
+                            }
+                        }
+                        
+                        // При скролле закрываем раскрытые элементы
+                        LaunchedEffect(listState.isScrollInProgress) {
+                            if (listState.isScrollInProgress && currentRevealedId != null) {
+                                currentRevealedId = null
+                            }
+                        }
+                        
                         LazyColumn(
+                            state = listState,
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                             contentPadding = PaddingValues(bottom = uploadPanelHeight)
                         ) {
+                            // === PENDING UPLOADS - сверху с анимацией ===
+                            items(pendingUploads, key = { "pending_${it.id}" }) { pending ->
+                                Box(modifier = Modifier.animateItemPlacement()) {
+                                    UploadingDocumentItem(
+                                        pending = pending,
+                                        onRetry = { viewModel.retryUpload(pending.id) },
+                                        onCancel = { viewModel.cancelPendingUpload(pending.id) }
+                                    )
+                                }
+                            }
+                            
+                            // === ЗАГРУЖЕННЫЕ ДОКУМЕНТЫ ===
                             items(visibleDocuments, key = { it.id }) { document ->
                                 // Используем smartTitle если есть, иначе displayName
                                 val smartTitle = document.smartTitle
@@ -270,14 +317,18 @@ fun DocumentsScreen(
                                 val thumbUrl = document.getThumbnailUrl()
                                 val prevUrl = document.getPreviewUrl()
                                 
-                                // Swipe-to-delete wrapper
-                                SwipeableDocumentItem(
-                                    onDelete = { viewModel.deleteDocument(document.id) }
+                                // Swipe-to-delete wrapper с плавной анимацией
+                                Box(modifier = Modifier.animateItemPlacement()) {
+                                    SwipeableDocumentItem(
+                                    onDelete = { viewModel.deleteDocument(document.id) },
+                                    currentRevealedId = currentRevealedId,
+                                    itemId = document.id,
+                                    onReveal = { currentRevealedId = it }
                                 ) {
                                     GlassDocumentItemV2(
                                         document = document,
                                         displayName = displayName,
-                                        showReady = viewModel.shouldShowReady(document, now),
+                                        isAwaitingAi = viewModel.isAwaitingAiProcessing(document, now),
                                         fileTypeLabel = formatMimeType(document.mimeType),
                                         thumbnailUrl = thumbUrl,
                                         authToken = authToken,
@@ -303,6 +354,7 @@ fun DocumentsScreen(
                                         }
                                     )
                                 }
+                                } // Box animateItem
                             }
                             item { Spacer(modifier = Modifier.height(8.dp)) }
                         }
@@ -312,15 +364,22 @@ fun DocumentsScreen(
 
         }
         
-        // Upload Panel - сплошной фон, чтобы контент не просвечивал
+        // Upload Panel - полупрозрачный glass-эффект как в чате
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(Color(0xFF0D1117)) // Сплошной фон
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF0A0E27).copy(alpha = 0.85f),
+                            Color(0xFF0A0E27).copy(alpha = 0.98f)
+                        )
+                    )
+                )
                 .padding(bottom = bottomPadding)
                 .padding(horizontal = 16.dp)
-                .padding(top = 10.dp, bottom = 6.dp),
+                .padding(top = 12.dp, bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
@@ -370,28 +429,6 @@ fun DocumentsScreen(
                 )
             }
 
-            // Upload progress
-            if (isUploading) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = GlassTheme.accentPrimary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "Загрузка...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = GlassTheme.textSecondary
-                    )
-                }
-            }
         }
     }
 
@@ -567,10 +604,14 @@ private fun GlassActionButton(
 
 /**
  * Swipe-to-reveal delete button - свайп показывает кнопку, не удаляет сразу
+ * Использует draggable вместо pointerInput чтобы не блокировать скролл
  */
 @Composable
 private fun SwipeableDocumentItem(
     onDelete: () -> Unit,
+    currentRevealedId: String?,
+    itemId: String,
+    onReveal: (String?) -> Unit,
     content: @Composable () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -579,40 +620,73 @@ private fun SwipeableDocumentItem(
     val deleteButtonWidthPx = with(LocalDensity.current) { deleteButtonWidth.toPx() }
     
     var isRevealed by remember { mutableStateOf(false) }
-    
-    // Высота элемента
     var itemHeight by remember { mutableStateOf(0) }
     
+    // Закрыть если другой элемент раскрыт
+    LaunchedEffect(currentRevealedId) {
+        if (currentRevealedId != itemId && isRevealed) {
+            offsetX.animateTo(0f, tween(150))
+            isRevealed = false
+        }
+    }
+    
+    // Зазор между карточкой и кнопкой удаления
+    val gap = 6.dp
+    val gapPx = with(LocalDensity.current) { gap.toPx() }
+    val totalSwipeDistance = deleteButtonWidthPx + gapPx
+    
     Box(modifier = Modifier.fillMaxWidth()) {
-        // Кнопка удаления - появляется справа при свайпе
-        // Показываем только когда есть смещение
+        // Кнопка удаления - элегантный дизайн справа при свайпе
         if (offsetX.value < -1f) {
+            val revealProgress = (-offsetX.value / totalSwipeDistance).coerceIn(0f, 1f)
+            
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .width(deleteButtonWidth + 4.dp)
-                    .height(with(LocalDensity.current) { itemHeight.toDp() })
-                    .clip(RoundedCornerShape(topEnd = 14.dp, bottomEnd = 14.dp))
-                    .background(GlassTheme.statusError)
+                    .width(deleteButtonWidth)
+                    .height(with(LocalDensity.current) { (itemHeight - 8).toDp() })
+                    .graphicsLayer { alpha = revealProgress }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFFE53935).copy(alpha = 0.95f),
+                                Color(0xFFD32F2F)
+                            )
+                        )
+                    )
                     .clickable {
                         coroutineScope.launch {
                             offsetX.animateTo(0f, tween(200))
                             isRevealed = false
+                            onReveal(null)
                         }
                         onDelete()
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Удалить",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
         
-        // Основной контент (свайпается)
+        // Основной контент
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -620,29 +694,41 @@ private fun SwipeableDocumentItem(
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
+                        onDragStart = { },
                         onDragEnd = {
                             coroutineScope.launch {
-                                if (offsetX.value < -deleteButtonWidthPx / 2) {
-                                    offsetX.animateTo(-deleteButtonWidthPx, tween(150))
+                                if (offsetX.value < -totalSwipeDistance / 2) {
+                                    offsetX.animateTo(-totalSwipeDistance, tween(150))
                                     isRevealed = true
+                                    onReveal(itemId) // Уведомляем что этот элемент раскрыт
                                 } else {
                                     offsetX.animateTo(0f, tween(150))
                                     isRevealed = false
+                                    if (currentRevealedId == itemId) onReveal(null)
                                 }
                             }
                         },
-                        onHorizontalDrag = { _, dragAmount ->
+                        onDragCancel = {
                             coroutineScope.launch {
-                                val newOffset = (offsetX.value + dragAmount).coerceIn(-deleteButtonWidthPx, 0f)
+                                offsetX.animateTo(0f, tween(150))
+                                isRevealed = false
+                            }
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            coroutineScope.launch {
+                                val newOffset = (offsetX.value + dragAmount).coerceIn(-totalSwipeDistance, 0f)
                                 offsetX.snapTo(newOffset)
                             }
                         }
                     )
                 }
                 .clickable(enabled = isRevealed) {
+                    // Клик по карточке когда раскрыто - закрыть
                     coroutineScope.launch {
                         offsetX.animateTo(0f, tween(150))
                         isRevealed = false
+                        onReveal(null)
                     }
                 }
         ) {
@@ -652,13 +738,202 @@ private fun SwipeableDocumentItem(
 }
 
 /**
+ * Компонент загружающегося документа с красивой анимацией
+ */
+@Composable
+private fun UploadingDocumentItem(
+    pending: PendingUpload,
+    onRetry: () -> Unit,
+    onCancel: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "upload")
+    
+    // Shimmer эффект для загрузки
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer"
+    )
+    
+    // Пульсация иконки
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+    
+    val isError = pending.status == UploadStatus.ERROR
+    val borderColor = if (isError) Color(0xFFE53935) else Color(0xFF6366F1)
+    
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        cornerRadius = 14.dp,
+        backgroundColor = GlassTheme.glassWhite,
+        borderColor = borderColor.copy(alpha = 0.6f)
+    ) {
+        Box {
+            // Shimmer overlay для загрузки
+            if (!isError) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFF6366F1).copy(alpha = 0.08f),
+                                    Color(0xFF8B5CF6).copy(alpha = 0.12f),
+                                    Color(0xFF6366F1).copy(alpha = 0.08f),
+                                    Color.Transparent
+                                ),
+                                startX = shimmerOffset * 1000f - 200f,
+                                endX = shimmerOffset * 1000f + 200f
+                            )
+                        )
+                )
+            }
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Иконка с анимацией
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .scale(if (!isError) pulse else 1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isError) Color(0xFFE53935).copy(alpha = 0.15f)
+                            else Color(0xFF6366F1).copy(alpha = 0.15f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isError) {
+                        Icon(
+                            Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            tint = Color(0xFFE53935),
+                            modifier = Modifier.size(26.dp)
+                        )
+                    } else {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color(0xFF6366F1),
+                            strokeWidth = 2.5.dp
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                // Название и статус
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = pending.filename.substringBeforeLast('.'),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = GlassTheme.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isError) {
+                            Text(
+                                text = pending.error?.take(40) ?: "Ошибка загрузки",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFE53935),
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        } else {
+                            Text(
+                                text = "Загрузка на сервер...",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF6366F1),
+                                fontSize = 11.sp
+                            )
+                        }
+                        
+                        Spacer(Modifier.width(8.dp))
+                        
+                        Text(
+                            text = pending.filename.substringAfterLast('.', "").uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = GlassTheme.textTertiary,
+                            fontSize = 10.sp,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+                
+                // Кнопки действий
+                if (isError) {
+                    // Retry
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF6366F1).copy(alpha = 0.15f))
+                            .clickable { onRetry() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Повторить",
+                            tint = Color(0xFF6366F1),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                
+                // Cancel/Remove
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable { onCancel() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Отменить",
+                        tint = GlassTheme.textSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * Компонент документа с thumbnail, smartTitle
+ * Показывает анимацию обработки если status = "processing"
  */
 @Composable
 private fun GlassDocumentItemV2(
     document: DocumentResponse,
     displayName: String,
-    showReady: Boolean,
+    isAwaitingAi: Boolean,
     fileTypeLabel: String,
     thumbnailUrl: String,
     authToken: String?,
@@ -669,20 +944,69 @@ private fun GlassDocumentItemV2(
     val isImage = document.mimeType?.startsWith("image/") == true
     val context = LocalContext.current
     
+    // Показываем анимацию обработки если ИИ ещё не дал smartTitle
+    val isProcessing = isAwaitingAi
+    
+    // Анимация для обработки
+    val infiniteTransition = rememberInfiniteTransition(label = "processing")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+    
+    val borderColor = if (isProcessing) Color(0xFF8B5CF6).copy(alpha = pulseAlpha * 0.6f) else GlassTheme.glassBorder
+    
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onPreview() },
         cornerRadius = 14.dp,
         backgroundColor = GlassTheme.glassWhite,
-        borderColor = GlassTheme.glassBorder
+        borderColor = borderColor
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Box {
+            // Shimmer для обработки
+            if (isProcessing) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFF8B5CF6).copy(alpha = 0.06f),
+                                    Color(0xFF6366F1).copy(alpha = 0.1f),
+                                    Color(0xFF8B5CF6).copy(alpha = 0.06f),
+                                    Color.Transparent
+                                ),
+                                startX = shimmerOffset * 800f - 200f,
+                                endX = shimmerOffset * 800f + 200f
+                            )
+                        )
+                )
+            }
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             // Thumbnail - с авторизацией
             Box(
                 modifier = Modifier
@@ -732,8 +1056,8 @@ private fun GlassDocumentItemV2(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Info
-            Column(modifier = Modifier.weight(1f)) {
+            // Info - с отступом справа чтобы не налезало на кнопку
+            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                 Text(
                     text = displayName,
                     style = MaterialTheme.typography.bodyMedium,
@@ -745,10 +1069,13 @@ private fun GlassDocumentItemV2(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (showReady || (document.status?.lowercase() != "processed")) {
-                        GlassStatusChip(
-                            status = document.status ?: "unknown",
-                            showReady = showReady
+                    // Статус обработки или тип файла
+                    if (isProcessing) {
+                        Text(
+                            text = "Распознаётся...",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF8B5CF6),
+                            fontSize = 11.sp
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                     }
@@ -762,6 +1089,16 @@ private fun GlassDocumentItemV2(
                 }
             }
 
+            // Индикатор обработки (слева от кнопки редактирования)
+            if (isProcessing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = Color(0xFF8B5CF6),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            
             // Только кнопка редактирования (удаление - через свайп)
             Box(
                 modifier = Modifier
@@ -778,8 +1115,9 @@ private fun GlassDocumentItemV2(
                     modifier = Modifier.size(16.dp)
                 )
             }
-        }
-    }
+            }  // Row
+        }  // Box (for shimmer)
+    }  // GlassCard
 }
 
 @Composable

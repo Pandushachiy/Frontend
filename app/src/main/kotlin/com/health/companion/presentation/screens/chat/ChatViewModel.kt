@@ -1,16 +1,22 @@
 package com.health.companion.presentation.screens.chat
 
+import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import androidx.lifecycle.SavedStateHandle
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.health.companion.data.local.database.ConversationEntity
 import com.health.companion.data.remote.api.MessageDTO
+import com.health.companion.data.repositories.AttachmentsRepository
 import com.health.companion.data.repositories.AuthRepository
 import com.health.companion.data.repositories.ChatRepository
 import com.health.companion.data.repositories.DocumentRepository
 import com.health.companion.data.repositories.VoiceRepository
+import com.health.companion.data.remote.api.AttachmentDTO
+import com.health.companion.data.remote.api.AttachmentMode
 import com.health.companion.ml.voice.VoiceInputManager
 import com.health.companion.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,10 +52,12 @@ class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val authRepository: AuthRepository,
     private val documentRepository: DocumentRepository,
+    private val attachmentsRepository: AttachmentsRepository,
     private val voiceInputManager: VoiceInputManager,
     private val voiceRepository: VoiceRepository,
     private val tokenManager: TokenManager,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ChatUiState>(ChatUiState.Success)
@@ -85,6 +93,14 @@ class ChatViewModel @Inject constructor(
     
     private val _uploadedFiles = MutableStateFlow<List<String>>(emptyList())
     val uploadedFiles: StateFlow<List<String>> = _uploadedFiles.asStateFlow()
+    
+    // Attached image for Image-to-Image
+    private val _attachedImageUri = MutableStateFlow<Uri?>(null)
+    val attachedImageUri: StateFlow<Uri?> = _attachedImageUri.asStateFlow()
+    
+    // Session Attachments
+    val sessionAttachments: StateFlow<List<AttachmentDTO>> = attachmentsRepository.attachments
+    val attachmentsLoading: StateFlow<Boolean> = attachmentsRepository.isLoading
     
     // Streaming state
     private val _streamingResponse = MutableStateFlow("")
@@ -129,11 +145,14 @@ class ChatViewModel @Inject constructor(
                 currentJob?.cancel()
                 
                 if (convId != null) {
+                    // Load session attachments for this conversation
+                    attachmentsRepository.loadAttachments(convId)
+                    
                     // Start new collection for this conversation
                     currentJob = viewModelScope.launch {
-                        chatRepository.getConversationMessages(convId)
-                            .catch { e -> Timber.e(e, "Failed to load messages") }
-                            .collect { messagesList ->
+                    chatRepository.getConversationMessages(convId)
+                .catch { e -> Timber.e(e, "Failed to load messages") }
+                .collect { messagesList ->
                                 // Only update if this is still the current conversation
                                 // AND not during streaming
                                 // AND Room has at least as many messages as memory (don't lose messages)
@@ -142,11 +161,14 @@ class ChatViewModel @Inject constructor(
                                     // Only update from Room if it has more/equal messages
                                     // This prevents overwriting in-memory messages before Room sync completes
                                     if (messagesList.size >= currentMessages.size || currentMessages.isEmpty()) {
-                                        _messages.value = messagesList
-                                    }
+                    _messages.value = messagesList
+                }
                                 }
                             }
                     }
+                } else {
+                    // Clear attachments when no conversation
+                    attachmentsRepository.clearAttachments()
                 }
                 // Don't clear messages when convId is null - keep showing previous
             }
@@ -159,7 +181,7 @@ class ChatViewModel @Inject constructor(
             Timber.d("ChatViewModel: Auth token loaded = ${_authToken.value?.take(20)}...")
         }
     }
-    
+
     private fun observeConversations() {
         viewModelScope.launch {
             chatRepository.getLocalConversationsFlow()
@@ -220,9 +242,30 @@ class ChatViewModel @Inject constructor(
                 _isStreaming.value = true
                 _streamingResponse.value = ""
                 _streamStatus.value = "thinking"
+                
+                // ВАЖНО: Сохраняем URI ДО всех операций!
+                val currentAttachedUri = _attachedImageUri.value
+                android.util.Log.d("IMAGE_DEBUG", "========== SEND MESSAGE ==========")
+                android.util.Log.d("IMAGE_DEBUG", "1. Current attached URI: $currentAttachedUri")
+                
+                // Get attached images as base64 for sending to backend
+                val attachedImages = getAttachedImagesBase64()
+                val hasAttachedImage = currentAttachedUri != null && attachedImages != null
+                android.util.Log.d("IMAGE_DEBUG", "2. Has attached image: $hasAttachedImage")
+                android.util.Log.d("IMAGE_DEBUG", "3. Base64 images count: ${attachedImages?.size ?: 0}")
+                if (attachedImages != null) {
+                    android.util.Log.d("IMAGE_DEBUG", "4. Base64 first 100 chars: ${attachedImages.firstOrNull()?.take(100)}")
+                }
 
-                // Add user message immediately
+                // Add user message immediately with the URI for display
                 val userMessageId = UUID.randomUUID().toString()
+                val attachedImageUris = if (hasAttachedImage && currentAttachedUri != null) {
+                    listOf(currentAttachedUri.toString()).also {
+                        android.util.Log.d("IMAGE_DEBUG", "5. Saving URI string for display: ${it.first()}")
+                    }
+                } else null
+                android.util.Log.d("IMAGE_DEBUG", "6. attachedImageUris: $attachedImageUris")
+                
                 val userMessage = MessageDTO(
                     id = userMessageId,
                     content = text,
@@ -231,11 +274,17 @@ class ChatViewModel @Inject constructor(
                     provider = null,
                     provider_color = null,
                     model_used = null,
-                    created_at = System.currentTimeMillis().toString()
+                    created_at = System.currentTimeMillis().toString(),
+                    imageUrl = null, // imageUrl is for AI-generated images
+                    images = attachedImageUris // Прикреплённые пользователем изображения (URI для отображения)
                 )
                 _messages.value = _messages.value + userMessage
+                android.util.Log.d("CHAT_DEBUG", "Added user message with images: ${userMessage.images}")
                 updateMessageStatus(userMessageId, MessageSendStatus.Sending)
                 _currentMessage.value = ""
+
+                // Clear attached image AFTER creating message
+                _attachedImageUri.value = null
 
                 // Streaming message state
                 val streamingMessageId = UUID.randomUUID().toString()
@@ -247,6 +296,7 @@ class ChatViewModel @Inject constructor(
                 chatRepository.sendMessageStream(
                     message = text,
                     conversationId = _currentConversationId.value,
+                    images = attachedImages,
                     onStatus = { status ->
                         android.util.Log.d("STREAM_DIAG", "📊 STATUS: '$status'")
                         viewModelScope.launch(Dispatchers.Main.immediate) {
@@ -344,7 +394,7 @@ class ChatViewModel @Inject constructor(
                                 if (m.id == streamingMessageId) m.copy(content = finalContent) else m
                             }
                             
-                            updateMessageStatus(userMessageId, MessageSendStatus.Sent)
+                    updateMessageStatus(userMessageId, MessageSendStatus.Sent)
                             _streamStatus.value = ""
                             
                             // Wait for animation to complete (approx 30ms per 2 chars)
@@ -392,7 +442,7 @@ class ChatViewModel @Inject constructor(
                             
                             // Remove streaming message if exists
                             _messages.value = _messages.value.filterNot { it.id == streamingMessageId }
-                            updateMessageStatus(userMessageId, MessageSendStatus.Failed)
+                    updateMessageStatus(userMessageId, MessageSendStatus.Failed)
                             _uiState.value = ChatUiState.Error(errorMsg)
                             _streamStatus.value = ""
                             _isStreaming.value = false
@@ -416,16 +466,33 @@ class ChatViewModel @Inject constructor(
     }
 
     fun retrySendMessage(messageId: String, content: String) {
+        // Сохраняем изображения из оригинального сообщения
+        val originalMessage = _messages.value.find { it.id == messageId }
+        val originalImages = originalMessage?.images
+        
         _messages.value = _messages.value.filterNot { it.id == messageId }
         _messageSendStatus.value = _messageSendStatus.value.toMutableMap().apply { remove(messageId) }
+        
+        // Восстанавливаем прикреплённое изображение если было
+        if (!originalImages.isNullOrEmpty()) {
+            val imageUri = originalImages.firstOrNull()
+            if (imageUri != null) {
+                try {
+                    _attachedImageUri.value = android.net.Uri.parse(imageUri)
+                } catch (e: Exception) {
+                    android.util.Log.e("RETRY", "Failed to restore attached image: $e")
+                }
+            }
+        }
+        
         sendMessage(content)
     }
 
     fun createNewConversation() {
         // Don't create conversation on backend yet - it will be created with first message
         // Just clear current state for new chat
-        _messages.value = emptyList()
-        _currentMessage.value = ""
+            _messages.value = emptyList()
+            _currentMessage.value = ""
         _currentConversationId.value = null
         savedStateHandle["conversationId"] = null
         _uiState.value = ChatUiState.Success
@@ -466,22 +533,28 @@ class ChatViewModel @Inject constructor(
                 
                 Timber.d("Uploading file from Uri: $uri")
                 
+                // Check if it's an image file
+                val mimeType = appContext.contentResolver.getType(uri)
+                val isImage = mimeType?.startsWith("image/") == true
+                
                 val result = documentRepository.uploadDocumentFromUri(uri)
                 
                 result.onSuccess { response ->
-                    Timber.d("File uploaded: ${response.filename}")
+                    Timber.d("File uploaded: ${response.filename}, isImage: $isImage")
                     _uploadedFiles.value = _uploadedFiles.value + response.filename
                     
-                    // Add system message about uploaded file
+                    // Add system message with image preview for images
                     val systemMessage = MessageDTO(
                         id = UUID.randomUUID().toString(),
-                        content = "📎 Файл загружен: ${response.filename}\nСтатус: ${response.status ?: "обработка..."}",
+                        content = if (isImage) "📷 Фото добавлено в контекст" else "📎 Файл загружен: ${response.filename}",
                         role = "assistant",
                         agent_name = "system",
                         provider = "system",
                         provider_color = null,
                         model_used = null,
-                        created_at = System.currentTimeMillis().toString()
+                        created_at = System.currentTimeMillis().toString(),
+                        // Для изображений добавляем превью
+                        images = if (isImage) listOf(uri.toString()) else null
                     )
                     _messages.value = _messages.value + systemMessage
                     
@@ -566,6 +639,155 @@ class ChatViewModel @Inject constructor(
                 _currentConversationId.value = null
                 savedStateHandle["conversationId"] = null
             }
+        }
+    }
+    
+    /**
+     * Delete a single message from chat
+     * Message is removed from UI immediately with animation,
+     * and marked as deleted on backend (excluded from context)
+     */
+    fun deleteMessage(messageId: String) {
+        viewModelScope.launch {
+            val conversationId = _currentConversationId.value ?: return@launch
+            
+            // Remove from local UI state immediately
+            _messages.value = _messages.value.filterNot { it.id == messageId }
+            
+            // Notify backend to exclude from context
+            try {
+                chatRepository.deleteMessage(conversationId, messageId)
+                Timber.d("Message deleted: $messageId")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to delete message from backend")
+                // UI already updated, backend will be informed later
+            }
+        }
+    }
+    
+    // ==================== Image-to-Image ====================
+    
+    /**
+     * Attach image for image-to-image editing
+     */
+    fun attachImage(uri: Uri) {
+        android.util.Log.d("IMAGE_ATTACH", "Attaching image: $uri")
+        _attachedImageUri.value = uri
+    }
+    
+    /**
+     * Remove attached image
+     */
+    fun removeAttachedImage() {
+        android.util.Log.d("IMAGE_ATTACH", "Removing attached image")
+        _attachedImageUri.value = null
+    }
+    
+    /**
+     * Convert Uri to base64 string with compression
+     */
+    private fun uriToBase64(uri: Uri): String? {
+        return try {
+            val inputStream = appContext.contentResolver.openInputStream(uri) ?: return null
+            
+            // Декодируем bitmap
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close()
+            
+            if (originalBitmap == null) {
+                android.util.Log.e("IMAGE_ATTACH", "Failed to decode bitmap from URI")
+                return null
+            }
+            
+            // Сжимаем если слишком большой (макс 1024px)
+            val maxSize = 1024
+            val scale = minOf(
+                maxSize.toFloat() / originalBitmap.width,
+                maxSize.toFloat() / originalBitmap.height,
+                1f // не увеличиваем
+            )
+            
+            val scaledBitmap = if (scale < 1f) {
+                android.graphics.Bitmap.createScaledBitmap(
+                    originalBitmap,
+                    (originalBitmap.width * scale).toInt(),
+                    (originalBitmap.height * scale).toInt(),
+                    true
+                )
+            } else {
+                originalBitmap
+            }
+            
+            // Конвертируем в JPEG base64
+            val outputStream = java.io.ByteArrayOutputStream()
+            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
+            val bytes = outputStream.toByteArray()
+            
+            // Base64 с правильным padding
+            val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP or Base64.NO_PADDING)
+            // Добавляем padding вручную если нужно
+            val paddedBase64 = when (base64.length % 4) {
+                2 -> base64 + "=="
+                3 -> base64 + "="
+                else -> base64
+            }
+            
+            android.util.Log.d("IMAGE_ATTACH", "Converted to base64: ${paddedBase64.length} chars, original size: ${originalBitmap.width}x${originalBitmap.height}, scaled: ${scaledBitmap.width}x${scaledBitmap.height}")
+            
+            // Освобождаем память
+            if (scaledBitmap != originalBitmap) {
+                scaledBitmap.recycle()
+            }
+            originalBitmap.recycle()
+            
+            "data:image/jpeg;base64,$paddedBase64"
+        } catch (e: Exception) {
+            android.util.Log.e("IMAGE_ATTACH", "Failed to convert Uri to base64", e)
+            null
+        }
+    }
+    
+    /**
+     * Get attached images as base64 list
+     */
+    private fun getAttachedImagesBase64(): List<String>? {
+        val uri = _attachedImageUri.value ?: return null
+        val base64 = uriToBase64(uri) ?: return null
+        return listOf(base64)
+    }
+    
+    // ==================== Session Attachments ====================
+    
+    /**
+     * Load attachments for current conversation
+     */
+    fun loadSessionAttachments() {
+        val conversationId = _currentConversationId.value ?: return
+        viewModelScope.launch {
+            attachmentsRepository.loadAttachments(conversationId)
+        }
+    }
+    
+    /**
+     * Upload file to session context
+     */
+    fun uploadSessionAttachment(uri: Uri) {
+        val conversationId = _currentConversationId.value ?: return
+        viewModelScope.launch {
+            attachmentsRepository.uploadAttachment(conversationId, uri, AttachmentMode.CONTEXT)
+                .onFailure { e ->
+                    Timber.e(e, "Failed to upload session attachment")
+                }
+        }
+    }
+    
+    /**
+     * Delete session attachment
+     */
+    fun deleteSessionAttachment(attachmentId: String) {
+        val conversationId = _currentConversationId.value ?: return
+        viewModelScope.launch {
+            attachmentsRepository.deleteAttachment(conversationId, attachmentId)
         }
     }
 

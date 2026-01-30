@@ -1,18 +1,28 @@
 package com.health.companion.presentation.screens.chat
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
@@ -26,7 +36,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -37,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
@@ -47,9 +63,11 @@ import coil.request.ImageRequest
 import com.health.companion.BuildConfig
 import com.health.companion.data.remote.api.MessageDTO
 import com.health.companion.presentation.components.*
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.roundToInt
 
 // API Host for constructing full URLs
 private val API_HOST = BuildConfig.API_BASE_URL.substringBefore("/api/")
@@ -67,7 +85,9 @@ private val API_HOST = BuildConfig.API_BASE_URL.substringBefore("/api/")
  * - Салатовый/мятный градиент для user
  * - Цветной полупрозрачный фон для AI
  * - Компактные размеры
+ * - Long press для удаления сообщения
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatBubbleV2(
     message: MessageDTO,
@@ -77,11 +97,42 @@ fun ChatBubbleV2(
     modifier: Modifier = Modifier,
     animate: Boolean = false,
     authToken: String? = null,
-    onRetry: () -> Unit = {}
+    onRetry: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
     val isUser = message.role == "user"
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val maxBubbleWidth = screenWidth * 0.82f  // Чуть меньше для компактности
+    val maxBubbleWidth = screenWidth * 0.82f
+    val haptic = LocalHapticFeedback.current
+    
+    // Режим удаления — сообщение выделено красным
+    var isInDeleteMode by remember { mutableStateOf(false) }
+    
+    // Анимация исчезновения при удалении
+    var isDeleting by remember { mutableStateOf(false) }
+    val deleteAlpha by animateFloatAsState(
+        targetValue = if (isDeleting) 0f else 1f,
+        animationSpec = tween(350, easing = EaseOutCubic),
+        finishedListener = { if (isDeleting) onDelete() },
+        label = "deleteAlpha"
+    )
+    val deleteScale by animateFloatAsState(
+        targetValue = if (isDeleting) 0.85f else 1f,
+        animationSpec = tween(350, easing = EaseOutCubic),
+        label = "deleteScale"
+    )
+    val deleteOffsetY by animateFloatAsState(
+        targetValue = if (isDeleting) -30f else 0f,
+        animationSpec = tween(350, easing = EaseOutCubic),
+        label = "deleteOffsetY"
+    )
+    
+    // Анимация красного контура
+    val borderAlpha by animateFloatAsState(
+        targetValue = if (isInDeleteMode) 1f else 0f,
+        animationSpec = tween(200),
+        label = "borderAlpha"
+    )
     
     val formattedText = remember(message.content) { formatMessageTextV2(message.content) }
     
@@ -100,15 +151,36 @@ fun ChatBubbleV2(
         bottomEnd = 18.dp
     )
     
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+    // Основной контейнер
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = deleteAlpha
+                scaleX = deleteScale
+                scaleY = deleteScale
+                translationY = deleteOffsetY
+            }
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { if (isInDeleteMode) isInDeleteMode = false },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    isInDeleteMode = true
+                }
+            )
     ) {
-        Row(
+        // Основной контент
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-            verticalAlignment = Alignment.Top  // TOP! Чтобы аватар не смещался
+            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+                verticalAlignment = Alignment.Top
+            ) {
             // === ASSISTANT SIDE ===
             if (!isUser) {
                 // Avatar (только для первого в группе) — выравнивание TOP
@@ -119,13 +191,39 @@ fun ChatBubbleV2(
                     Spacer(Modifier.width(34.dp))
                 }
                 
-                // Проверяем есть ли картинка
-                val hasImage = message.imageUrl != null
+                // Проверяем есть ли картинка (сгенерированная или загруженная)
+                val hasGeneratedImage = message.imageUrl != null
+                val hasUploadedImages = !message.images.isNullOrEmpty()
                 val hasText = message.content.isNotBlank()
+                val context = LocalContext.current
                 
                 Column(modifier = Modifier.widthIn(max = maxBubbleWidth)) {
-                    // Картинка БЕЗ подложки — напрямую
-                    if (hasImage) {
+                    // Загруженные изображения (превью) — для system сообщений
+                    if (hasUploadedImages) {
+                        message.images?.forEach { imageUri ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(Uri.parse(imageUri))
+                                        .crossfade(200)
+                                        .build(),
+                                    contentDescription = "Загруженное фото",
+                                    contentScale = ContentScale.FillWidth,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                )
+                            }
+                        }
+                        if (hasText) Spacer(Modifier.height(6.dp))
+                    }
+                    
+                    // Сгенерированная картинка
+                    if (hasGeneratedImage) {
                         message.imageUrl?.let { imageUrl ->
                             Timber.d("ChatBubbleV2: displaying image $imageUrl")
                             android.util.Log.d("IMAGE_DEBUG", "🖼️ ChatBubbleV2 showing imageUrl=$imageUrl")
@@ -158,8 +256,8 @@ fun ChatBubbleV2(
                         ) {
                             Column {
                                 if (message.agent_name != null && 
-                                    message.agent_name !in listOf("chat", "offline", "streaming") &&
-                                    isFirstInGroup && !hasImage) {
+                                    message.agent_name !in listOf("chat", "offline", "streaming", "system") &&
+                                    isFirstInGroup && !hasGeneratedImage && !hasUploadedImages) {
                                     Text(
                                         text = message.agent_name,
                                         style = GlassTypography.timestamp.copy(
@@ -257,8 +355,86 @@ fun ChatBubbleV2(
                 }
             }
         }
-    }
-}
+        }  // Close Column
+        
+        // === КРАСНЫЙ КОНТУР И КНОПКИ УДАЛЕНИЯ ===
+        if (isInDeleteMode) {
+            // Контур вокруг всего сообщения
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(horizontal = if (!isUser) 30.dp else 0.dp)
+                    .border(
+                        width = 2.dp,
+                        color = Color(0xFFE53935).copy(alpha = borderAlpha),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+            )
+            
+            // Кнопки удаления/отмены
+            Row(
+                modifier = Modifier
+                    .align(if (isUser) Alignment.BottomEnd else Alignment.BottomStart)
+                    .padding(
+                        start = if (!isUser) 38.dp else 0.dp,
+                        end = if (isUser) 4.dp else 0.dp,
+                        bottom = 4.dp
+                    )
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1A1A2E).copy(alpha = 0.98f))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Кнопка УДАЛИТЬ
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE53935))
+                        .clickable { 
+                            isInDeleteMode = false
+                            isDeleting = true
+                        }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Удалить",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                
+                // Кнопка ОТМЕНА
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF3A3F5C))
+                        .clickable { isInDeleteMode = false }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Отмена",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }  // Close Box wrapper
+}  // Close ChatBubbleV2
 
 /**
  * Blueberry Avatar V2 — компактный
@@ -646,13 +822,20 @@ private fun GeneratedImageCard(
                 .clip(RoundedCornerShape(16.dp)),
             contentScale = ContentScale.FillWidth,
             loading = {
+                // Простой shimmer placeholder вместо анимации генерации
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF1A1F3A))
                 ) {
-                    ImageGeneratingAnimation()
+                    // Минималистичный индикатор загрузки
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center).size(32.dp),
+                        color = Color(0xFF6366F1),
+                        strokeWidth = 2.dp
+                    )
                 }
             },
             error = {
@@ -742,6 +925,297 @@ private fun downloadImage(context: android.content.Context, url: String, authTok
 }
 
 // ImageLoadingAnimation удалена - используем ImageGeneratingAnimation вместо неё
+
+/**
+ * Анимация трансформации для Image-to-Image
+ * Показывает исходное(ые) фото с эффектами AI-обработки
+ * Плавная и медленная анимация
+ */
+@Composable
+fun ImageToImageAnimation(
+    sourceImageUris: List<String>,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "i2i")
+    val context = LocalContext.current
+    
+    // Волна shimmer - плавная туда-обратно (без скачков)
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse  // Туда-обратно = плавно
+        ),
+        label = "shimmer"
+    )
+    
+    // Пульсация рамки - плавная (3 секунды)
+    val borderPulse by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "borderPulse"
+    )
+    
+    // Мягкое свечение - очень медленное (5 секунд)
+    val glowPulse by infiniteTransition.animateFloat(
+        initialValue = 0.1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(5000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+    
+    // Dots progress - медленнее (2.5 секунды)
+    val dotsProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "dots"
+    )
+    
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(if (sourceImageUris.size > 1) 1.5f else 1f)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF0A0E14))
+    ) {
+        // Одно или несколько изображений
+        if (sourceImageUris.size == 1) {
+            // Одно изображение - с мягкими эффектами
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Исходное изображение - стабильное, без дёрганья
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(Uri.parse(sourceImageUris.first()))
+                        .crossfade(300)
+                        .build(),
+                    contentDescription = "Source image",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                
+                // Мягкое затемнение для контраста
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.15f))
+                )
+                
+                // Плавный shimmer overlay - горизонтальная волна света
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    val width = size.width
+                    val height = size.height
+                    // Горизонтальная полоса движется слева направо и обратно
+                    val stripWidth = width * 0.4f
+                    val position = shimmerOffset * (width + stripWidth) - stripWidth / 2
+                    
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(alpha = 0.12f),
+                                Color(0xFF8B5CF6).copy(alpha = 0.18f),
+                                Color(0xFF6366F1).copy(alpha = 0.15f),
+                                Color.White.copy(alpha = 0.12f),
+                                Color.Transparent
+                            ),
+                            start = androidx.compose.ui.geometry.Offset(position - stripWidth, 0f),
+                            end = androidx.compose.ui.geometry.Offset(position + stripWidth, height)
+                        ),
+                        size = size
+                    )
+                }
+                
+                // Мягкое свечение по краям вместо scan line
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFF8B5CF6).copy(alpha = glowPulse)
+                                ),
+                                radius = 800f
+                            )
+                        )
+                )
+                
+                // Пульсирующая рамка - плавная
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(
+                            width = 2.dp,
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF6366F1).copy(alpha = borderPulse),
+                                    Color(0xFF8B5CF6).copy(alpha = borderPulse * 0.6f),
+                                    Color(0xFFEC4899).copy(alpha = borderPulse * 0.8f),
+                                    Color(0xFF8B5CF6).copy(alpha = borderPulse * 0.6f),
+                                    Color(0xFF6366F1).copy(alpha = borderPulse)
+                                )
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                )
+            }
+        } else {
+            // Несколько изображений - сетка 2xN
+            val columns = 2
+            val rows = (sourceImageUris.size + 1) / 2
+            
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                for (row in 0 until rows) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        for (col in 0 until columns) {
+                            val index = row * columns + col
+                            if (index < sourceImageUris.size) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(8.dp))
+                                ) {
+                                    // Изображение
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(Uri.parse(sourceImageUris[index]))
+                                            .crossfade(300)
+                                            .build(),
+                                        contentDescription = "Source image ${index + 1}",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    
+                                    // Мягкое затемнение
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Black.copy(alpha = 0.1f))
+                                    )
+                                    
+                                    // Individual shimmer - со смещением по времени
+                                    val offsetMultiplier = (index * 0.3f)
+                                    val adjustedShimmer = ((shimmerOffset + offsetMultiplier) % 1.6f) - 0.3f
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colorStops = arrayOf(
+                                                        0f to Color.Transparent,
+                                                        (adjustedShimmer - 0.1f).coerceIn(0f, 1f) to Color.Transparent,
+                                                        adjustedShimmer.coerceIn(0f, 1f) to Color.White.copy(alpha = 0.2f),
+                                                        (adjustedShimmer + 0.1f).coerceIn(0f, 1f) to Color.Transparent,
+                                                        1f to Color.Transparent
+                                                    )
+                                                )
+                                            )
+                                    )
+                                    
+                                    // Пульсирующая рамка
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .border(
+                                                width = 1.5.dp,
+                                                color = Color(0xFF8B5CF6).copy(alpha = borderPulse * 0.7f),
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                    )
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Текст статуса снизу - с плавным градиентом
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color(0xFF0A0E14).copy(alpha = 0.85f)
+                        )
+                    )
+                )
+                .padding(vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "✨",
+                    fontSize = 14.sp
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = if (sourceImageUris.size == 1) "Трансформирую изображение" 
+                           else "Обрабатываю ${sourceImageUris.size} изображений",
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            
+            // Анимированные точки - плавнее
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(3) { index ->
+                    val dotAlpha = when {
+                        dotsProgress < 0.33f -> if (index == 0) 0.9f else 0.25f
+                        dotsProgress < 0.66f -> if (index <= 1) 0.9f else 0.25f
+                        else -> 0.9f
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(
+                                Color(0xFF8B5CF6).copy(alpha = dotAlpha),
+                                CircleShape
+                            )
+                    )
+                }
+            }
+        }
+    }
+}
 
 /**
  * Красивая анимация генерации изображения

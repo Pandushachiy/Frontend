@@ -34,6 +34,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateToLogin: () -> Unit = {},
     onOpenProfile: () -> Unit = {},
+    onOpenMedical: () -> Unit = {},
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -111,6 +112,63 @@ fun SettingsScreen(
                     )
                     Text(
                         text = userEmail,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = GlassTheme.textSecondary
+                    )
+                }
+                
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = GlassTheme.textTertiary
+                )
+            }
+        }
+
+        // Health Section
+        SectionTitle(text = "Здоровье")
+        
+        GlassCard(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onOpenMedical
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF4facfe),
+                                    Color(0xFF00f2fe)
+                                )
+                            ),
+                            RoundedCornerShape(10.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "🏥",
+                        fontSize = 20.sp
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Медицинский помощник",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GlassTheme.textPrimary
+                    )
+                    Text(
+                        text = "Симптомы, лекарства, анализы",
                         style = MaterialTheme.typography.bodySmall,
                         color = GlassTheme.textSecondary
                     )

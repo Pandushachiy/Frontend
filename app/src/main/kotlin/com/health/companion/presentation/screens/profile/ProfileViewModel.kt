@@ -2,95 +2,208 @@ package com.health.companion.presentation.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.health.companion.data.remote.api.ProfileResponse
-import com.health.companion.data.repositories.ProfileRepository
+import com.health.companion.data.remote.api.*
+import com.health.companion.data.repositories.LifeContextRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
-data class ProfileUiState(
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val profile: ProfileResponse? = null,
-    val deletingId: String? = null
-)
-
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val profileRepository: ProfileRepository
+    private val repository: LifeContextRepository
 ) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(ProfileUiState())
-    val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
-
+    
+    // === Profile State ===
+    private val _profile = MutableStateFlow<UserProfile?>(null)
+    val profile: StateFlow<UserProfile?> = _profile.asStateFlow()
+    
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+    
+    // === Questionnaire State ===
+    private val _questionnaire = MutableStateFlow<QuestionnaireResponse?>(null)
+    val questionnaire: StateFlow<QuestionnaireResponse?> = _questionnaire.asStateFlow()
+    
+    private val _currentSection = MutableStateFlow(0)
+    val currentSection: StateFlow<Int> = _currentSection.asStateFlow()
+    
+    private val _answers = MutableStateFlow<MutableMap<String, Any>>(mutableMapOf())
+    val answers: StateFlow<Map<String, Any>> = _answers.asStateFlow()
+    
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+    
+    // === Important Dates ===
+    private val _importantDates = MutableStateFlow<List<ImportantDate>>(emptyList())
+    val importantDates: StateFlow<List<ImportantDate>> = _importantDates.asStateFlow()
+    
+    // === Important People ===
+    private val _importantPeople = MutableStateFlow<List<ImportantPerson>>(emptyList())
+    val importantPeople: StateFlow<List<ImportantPerson>> = _importantPeople.asStateFlow()
+    
+    // === Life Patterns ===
+    private val _patterns = MutableStateFlow<LifePatternsResponse?>(null)
+    val patterns: StateFlow<LifePatternsResponse?> = _patterns.asStateFlow()
+    
+    val sections = listOf("basic", "health", "lifestyle", "social", "goals", "mental")
+    
     init {
         loadProfile()
+        loadQuestionnaire()
+        loadImportantDates()
+        loadImportantPeople()
     }
-
-    fun loadProfile(forceRefresh: Boolean = false) {
+    
+    // ==================== PROFILE ====================
+    
+    fun loadProfile() {
         viewModelScope.launch {
-            // Сначала покажем кэш (если есть)
-            val cached = profileRepository.getCachedProfile()
-            if (cached != null && !forceRefresh) {
-                _uiState.update { it.copy(profile = cached, isLoading = false) }
-            } else {
-                _uiState.update { it.copy(isLoading = true, error = null) }
-            }
-
-            // Потом загрузим свежие данные
-            val result = profileRepository.getProfile()
-            result.onSuccess { profile ->
-                _uiState.update { it.copy(profile = profile, isLoading = false, error = null) }
-            }.onFailure { e ->
-                // Если есть кэш - не показываем ошибку
-                if (_uiState.value.profile == null) {
-                    _uiState.update { it.copy(error = e.message, isLoading = false) }
-                } else {
-                    _uiState.update { it.copy(isLoading = false) }
+            _isLoading.value = true
+            _error.value = null
+            
+            repository.getProfile()
+                .onSuccess { _profile.value = it }
+                .onFailure { 
+                    Timber.e(it, "Failed to load profile")
+                    _error.value = it.message
                 }
-                Timber.e(e, "Profile load failed")
-            }
+            
+            _isLoading.value = false
         }
     }
-
-    fun refresh() = loadProfile(forceRefresh = true)
-
-    fun deleteFact(id: String) {
+    
+    // ==================== QUESTIONNAIRE ====================
+    
+    fun loadQuestionnaire(section: String? = null) {
         viewModelScope.launch {
-            _uiState.update { it.copy(deletingId = id, error = null) }
-            val result = profileRepository.deleteFact(id)
-            result.onSuccess {
-                _uiState.update { state ->
-                    val updated = state.profile?.copy(
-                        facts = state.profile.facts.filterNot { it.id == id }
-                    )
-                    state.copy(profile = updated, deletingId = null)
-                }
-            }.onFailure { e ->
-                Timber.e(e, "Delete fact failed")
-                _uiState.update { it.copy(deletingId = null, error = e.message) }
-            }
+            repository.getQuestionnaire(section)
+                .onSuccess { _questionnaire.value = it }
+                .onFailure { Timber.e(it, "Failed to load questionnaire") }
         }
     }
-
-    fun clearAllFacts() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            val result = profileRepository.clearAllFacts()
-            result.onSuccess {
-                _uiState.update { state ->
-                    val updated = state.profile?.copy(facts = emptyList())
-                    state.copy(profile = updated, isLoading = false)
-                }
-            }.onFailure { e ->
-                Timber.e(e, "Clear facts failed")
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
-            }
+    
+    fun setAnswer(key: String, value: Any) {
+        _answers.value = _answers.value.toMutableMap().apply {
+            put(key, value)
         }
+    }
+    
+    fun nextSection() {
+        if (_currentSection.value < sections.size - 1) {
+            _currentSection.value++
+        }
+    }
+    
+    fun previousSection() {
+        if (_currentSection.value > 0) {
+            _currentSection.value--
+        }
+    }
+    
+    fun goToSection(index: Int) {
+        if (index in sections.indices) {
+            _currentSection.value = index
+        }
+    }
+    
+    fun saveAnswers(onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isSaving.value = true
+            
+            repository.saveAnswers(_answers.value)
+                .onSuccess { 
+                    loadProfile()
+                    onSuccess()
+                }
+                .onFailure { 
+                    _error.value = it.message
+                    Timber.e(it, "Failed to save answers")
+                }
+            
+            _isSaving.value = false
+        }
+    }
+    
+    // ==================== IMPORTANT DATES ====================
+    
+    fun loadImportantDates() {
+        viewModelScope.launch {
+            repository.getImportantDates()
+                .onSuccess { _importantDates.value = it }
+                .onFailure { Timber.e(it, "Failed to load important dates") }
+        }
+    }
+    
+    fun addImportantDate(date: String, title: String, eventType: String = "custom", recurring: Boolean = true) {
+        viewModelScope.launch {
+            _isSaving.value = true
+            val request = ImportantDateCreate(date, title, eventType, recurring)
+            
+            repository.addImportantDate(request)
+                .onSuccess { loadImportantDates() }
+                .onFailure { _error.value = it.message }
+            
+            _isSaving.value = false
+        }
+    }
+    
+    fun deleteImportantDate(id: String) {
+        viewModelScope.launch {
+            repository.deleteImportantDate(id)
+                .onSuccess { loadImportantDates() }
+                .onFailure { _error.value = it.message }
+        }
+    }
+    
+    // ==================== IMPORTANT PEOPLE ====================
+    
+    fun loadImportantPeople() {
+        viewModelScope.launch {
+            repository.getImportantPeople()
+                .onSuccess { _importantPeople.value = it }
+                .onFailure { Timber.e(it, "Failed to load important people") }
+        }
+    }
+    
+    fun addImportantPerson(name: String, relation: String, details: String? = null, birthday: String? = null) {
+        viewModelScope.launch {
+            _isSaving.value = true
+            val request = ImportantPersonCreate(name, relation, details, birthday)
+            
+            repository.addImportantPerson(request)
+                .onSuccess { loadImportantPeople() }
+                .onFailure { _error.value = it.message }
+            
+            _isSaving.value = false
+        }
+    }
+    
+    fun deleteImportantPerson(id: String) {
+        viewModelScope.launch {
+            repository.deleteImportantPerson(id)
+                .onSuccess { loadImportantPeople() }
+                .onFailure { _error.value = it.message }
+        }
+    }
+    
+    // ==================== PATTERNS ====================
+    
+    fun loadPatterns() {
+        viewModelScope.launch {
+            repository.getLifePatterns()
+                .onSuccess { _patterns.value = it }
+                .onFailure { Timber.e(it, "Failed to load patterns") }
+        }
+    }
+    
+    fun clearError() {
+        _error.value = null
     }
 }

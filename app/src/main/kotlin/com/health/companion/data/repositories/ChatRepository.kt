@@ -46,10 +46,12 @@ interface ChatRepository {
     
     /**
      * SSE Streaming - посылает сообщение и получает ответ потоком
+     * @param images List of base64 encoded images for image-to-image editing
      */
     suspend fun sendMessageStream(
         message: String,
         conversationId: String?,
+        images: List<String>? = null,
         onStatus: (String) -> Unit,
         onToken: (String) -> Unit,
         onImage: (url: String, prompt: String) -> Unit,
@@ -65,6 +67,7 @@ interface ChatRepository {
     suspend fun deleteLocalConversation(conversationId: String): Result<Unit>
     suspend fun syncConversationMessages(conversationId: String): Result<List<MessageDTO>>
     suspend fun deleteConversation(conversationId: String): Result<Unit>
+    suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit>
     fun connectWebSocket(userId: String): Flow<WebSocketMessage>
     suspend fun disconnectWebSocket()
     suspend fun clearAllLocalData()
@@ -79,9 +82,10 @@ class ChatRepositoryImpl @Inject constructor(
     private val okHttpClient: OkHttpClient // Injected client with TokenAuthenticator
 ) : ChatRepository {
     
-    // Use injected client but with longer timeouts for SSE streaming
+    // SSE streaming client with reasonable timeouts
     private val streamClient = okHttpClient.newBuilder()
-        .readTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)  // 90 sec - enough for normal responses
+        .writeTimeout(30, TimeUnit.SECONDS) 
         .connectTimeout(30, TimeUnit.SECONDS)
         .build()
     
@@ -214,13 +218,14 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun sendMessageStream(
         message: String,
         conversationId: String?,
+        images: List<String>?,
         onStatus: (String) -> Unit,
         onToken: (String) -> Unit,
         onImage: (url: String, prompt: String) -> Unit,
         onDone: (messageId: String, fullContent: String, newConversationId: String?) -> Unit,
         onError: (String) -> Unit
     ) {
-        android.util.Log.d("SSE_DEBUG", "sendMessageStream called with message: $message")
+        android.util.Log.d("SSE_DEBUG", "sendMessageStream called with message: $message, images: ${images?.size ?: 0}")
         
         val token = tokenManager.getAccessToken()
         if (token == null) {
@@ -234,7 +239,19 @@ class ChatRepositoryImpl @Inject constructor(
         val body = JSONObject().apply {
             put("message", message)
             conversationId?.let { put("conversation_id", it) }
+            // Add images for image-to-image editing
+            if (!images.isNullOrEmpty()) {
+                val imagesArray = org.json.JSONArray()
+                images.forEach { img ->
+                    imagesArray.put(img)
+                    android.util.Log.d("SSE_DEBUG", "Image base64 length: ${img.length}, prefix: ${img.take(50)}")
+                }
+                put("images", imagesArray)
+                android.util.Log.d("SSE_DEBUG", "✅ Added ${images.size} images to request body")
+            }
         }.toString()
+        
+        android.util.Log.d("SSE_DEBUG", "Request body length: ${body.length} chars")
         
         val url = "${BuildConfig.API_BASE_URL}/chat/send/stream"
         android.util.Log.d("SSE_DEBUG", "URL: $url")
@@ -356,10 +373,22 @@ class ChatRepositoryImpl @Inject constructor(
                 
                 override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
                     android.util.Log.e("SSE_DEBUG", "SSE FAILURE! code=${response?.code}, error=${t?.message}", t)
+                    
+                    // Ignore socket closed after we've received data
+                    if (t?.message?.contains("Socket closed") == true) return
+                    
                     val errorMsg = when {
-                        t is SocketTimeoutException -> "Превышено время ожидания"
+                        t is SocketTimeoutException -> {
+                            if (images?.isNotEmpty() == true) {
+                                "❌ Image-to-Image пока не работает. Backend не поддерживает."
+                            } else {
+                                "Превышено время ожидания"
+                            }
+                        }
                         response?.code == 401 -> "Требуется авторизация"
                         response?.code == 404 -> "Endpoint не найден"
+                        response?.code == 429 -> "⏳ Слишком много запросов. Подождите минуту."
+                        response?.code == 500 -> "Ошибка сервера. Попробуйте позже."
                         else -> t?.localizedMessage ?: "Ошибка подключения"
                     }
                     onError(errorMsg)
@@ -513,6 +542,25 @@ class ChatRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to delete conversation")
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit> {
+        return try {
+            // Delete locally
+            chatMessageDao.deleteById(messageId)
+            // Try to delete on backend (mark as excluded from context)
+            try {
+                chatApi.deleteMessage(conversationId, messageId)
+            } catch (e: Exception) {
+                // Backend might not support this yet - that's ok
+                Timber.w(e, "Backend delete message failed, local delete succeeded")
+            }
+            Timber.d("Message deleted: $messageId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to delete message")
             Result.failure(e)
         }
     }

@@ -19,6 +19,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.health.companion.utils.ImagePreloader
+import com.health.companion.BuildConfig
 import java.io.File
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -45,6 +47,10 @@ class DocumentsViewModel @Inject constructor(
 
     private val _authToken = MutableStateFlow<String?>(null)
     val authToken: StateFlow<String?> = _authToken.asStateFlow()
+    
+    // Pending uploads - показываем сразу в списке с анимацией
+    private val _pendingUploads = MutableStateFlow<List<PendingUpload>>(emptyList())
+    val pendingUploads: StateFlow<List<PendingUpload>> = _pendingUploads.asStateFlow()
 
     private var pendingPhotoUri: Uri? = null
     private var pendingPhotoFile: File? = null
@@ -55,6 +61,8 @@ class DocumentsViewModel @Inject constructor(
     val displayNames: StateFlow<Map<String, String>> = _displayNames.asStateFlow()
 
     private val localUploadTimes = mutableMapOf<String, Long>()
+    
+    private var uploadIdCounter = 0
 
     init {
         loadDocuments()
@@ -79,6 +87,9 @@ class DocumentsViewModel @Inject constructor(
                     ensureUploadTimes(docs)
                     handlePolling(docs)
                     _uiState.value = DocumentsUiState.Idle
+                    
+                    // Предзагружаем thumbnails в кэш для мгновенного отображения
+                    preloadThumbnails(docs)
                 }.onFailure { e ->
                     Timber.e(e, "DocumentsViewModel: Failed to load documents - ${e.message}")
                     _uiState.value = DocumentsUiState.Error(e.message ?: "Failed to load documents")
@@ -213,47 +224,149 @@ class DocumentsViewModel @Inject constructor(
     
     /**
      * Upload multiple documents at once (from gallery multi-select)
+     * Показывает их сразу в списке с анимацией загрузки
      */
     fun uploadDocuments(uris: List<Uri>) {
         if (uris.isEmpty()) return
         
-        viewModelScope.launch {
-            try {
-                _isUploading.value = true
-                _uiState.value = DocumentsUiState.Uploading
-                
-                Timber.d("Uploading ${uris.size} documents")
-                
-                var successCount = 0
-                var failCount = 0
-                
-                uris.forEach { uri ->
-                    val result = documentRepository.uploadDocumentFromUri(uri)
+        Timber.d("Starting upload of ${uris.size} documents")
+        
+        // Создаём pending uploads сразу - они появятся в списке
+        val newPending = uris.map { uri ->
+            val id = "pending_${uploadIdCounter++}"
+            val filename = getFilenameFromUri(uri)
+            PendingUpload(
+                id = id,
+                uri = uri,
+                filename = filename,
+                status = UploadStatus.UPLOADING,
+                progress = 0f
+            )
+        }
+        
+        _pendingUploads.value = _pendingUploads.value + newPending
+        _isUploading.value = true
+        
+        // Загружаем параллельно (до 3 одновременно)
+        newPending.forEach { pending ->
+            viewModelScope.launch {
+                try {
+                    Timber.d("Uploading: ${pending.filename}")
+                    
+                    val result = documentRepository.uploadDocumentFromUri(pending.uri)
+                    
                     result.onSuccess { response ->
-                        Timber.d("Document uploaded: ${response.id}")
+                        Timber.d("Upload success: ${response.id}")
                         localUploadTimes[response.id] = System.currentTimeMillis()
-                        successCount++
+                        
+                        // Убираем из pending
+                        _pendingUploads.value = _pendingUploads.value.filter { it.id != pending.id }
+                        
+                        // Добавляем в основной список
+                        _documents.value = listOf(response) + _documents.value
+                        
                     }.onFailure { e ->
-                        Timber.e(e, "Failed to upload: $uri")
-                        failCount++
+                        Timber.e(e, "Upload failed: ${pending.filename}")
+                        // Помечаем как ошибку
+                        _pendingUploads.value = _pendingUploads.value.map {
+                            if (it.id == pending.id) it.copy(status = UploadStatus.ERROR, error = e.message)
+                            else it
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Upload exception: ${pending.filename}")
+                    _pendingUploads.value = _pendingUploads.value.map {
+                        if (it.id == pending.id) it.copy(status = UploadStatus.ERROR, error = e.message)
+                        else it
                     }
                 }
-                
-                loadDocuments()
-                
-                if (failCount == 0) {
-                    _uiState.value = DocumentsUiState.UploadSuccess("$successCount файлов")
-                } else {
-                    _uiState.value = DocumentsUiState.Error("Загружено $successCount, ошибок: $failCount")
-                }
-                
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to upload documents")
-                _uiState.value = DocumentsUiState.Error(e.message ?: "Upload failed")
-            } finally {
-                _isUploading.value = false
             }
         }
+        
+        // Следим за завершением всех загрузок
+        viewModelScope.launch {
+            while (_pendingUploads.value.any { it.status == UploadStatus.UPLOADING }) {
+                delay(500)
+            }
+            _isUploading.value = false
+            
+            // Убираем успешные через 2 секунды
+            delay(2000)
+            _pendingUploads.value = _pendingUploads.value.filter { it.status == UploadStatus.ERROR }
+        }
+    }
+    
+    private fun getFilenameFromUri(uri: Uri): String {
+        return try {
+            // Пробуем получить DISPLAY_NAME через ContentResolver
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex >= 0) {
+                        val name = cursor.getString(nameIndex)
+                        if (!name.isNullOrBlank()) return name
+                    }
+                }
+                null
+            }?.let { return it }
+            
+            // Fallback: используем lastPathSegment с расширением
+            val segment = uri.lastPathSegment ?: "file"
+            
+            // Если это просто ID (числа), добавляем расширение на основе MIME
+            if (segment.all { it.isDigit() }) {
+                val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                val ext = when {
+                    mimeType.contains("jpeg") || mimeType.contains("jpg") -> "jpg"
+                    mimeType.contains("png") -> "png"
+                    mimeType.contains("webp") -> "webp"
+                    mimeType.contains("gif") -> "gif"
+                    mimeType.contains("pdf") -> "pdf"
+                    else -> "file"
+                }
+                "IMG_$segment.$ext"
+            } else {
+                segment
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting filename from URI")
+            "file_${System.currentTimeMillis()}.jpg"
+        }
+    }
+    
+    fun retryUpload(pendingId: String) {
+        val pending = _pendingUploads.value.find { it.id == pendingId } ?: return
+        
+        // Сбрасываем статус
+        _pendingUploads.value = _pendingUploads.value.map {
+            if (it.id == pendingId) it.copy(status = UploadStatus.UPLOADING, error = null)
+            else it
+        }
+        
+        viewModelScope.launch {
+            try {
+                val result = documentRepository.uploadDocumentFromUri(pending.uri)
+                result.onSuccess { response ->
+                    localUploadTimes[response.id] = System.currentTimeMillis()
+                    _pendingUploads.value = _pendingUploads.value.filter { it.id != pendingId }
+                    _documents.value = listOf(response) + _documents.value
+                }.onFailure { e ->
+                    _pendingUploads.value = _pendingUploads.value.map {
+                        if (it.id == pendingId) it.copy(status = UploadStatus.ERROR, error = e.message)
+                        else it
+                    }
+                }
+            } catch (e: Exception) {
+                _pendingUploads.value = _pendingUploads.value.map {
+                    if (it.id == pendingId) it.copy(status = UploadStatus.ERROR, error = e.message)
+                    else it
+                }
+            }
+        }
+    }
+    
+    fun cancelPendingUpload(pendingId: String) {
+        _pendingUploads.value = _pendingUploads.value.filter { it.id != pendingId }
     }
 
     /**
@@ -337,6 +450,46 @@ class DocumentsViewModel @Inject constructor(
         val tenMinutes = 10 * 60 * 1000L
         return diff in fiveMinutes..tenMinutes
     }
+    
+    /**
+     * Проверяет, загружен ли документ недавно (в последние 2 минуты)
+     * и ещё ожидает обработки ИИ (smartTitle == null)
+     */
+    fun isAwaitingAiProcessing(document: DocumentResponse, now: Long): Boolean {
+        // Если уже есть smartTitle - обработка завершена
+        if (document.smartTitle != null) return false
+        
+        // Если status = processing - точно в обработке
+        if (document.status?.lowercase() == "processing") return true
+        
+        // Если недавно загружен (в течение 2 минут) и нет smartTitle - показываем обработку
+        val uploadTime = localUploadTimes[document.id] ?: parseInstant(document.uploadedAt) ?: return false
+        val diff = now - uploadTime
+        val twoMinutes = 2 * 60 * 1000L
+        return diff < twoMinutes
+    }
+    
+    /**
+     * Предзагружает thumbnails документов в кэш для мгновенного отображения
+     */
+    private fun preloadThumbnails(docs: List<DocumentResponse>) {
+        viewModelScope.launch {
+            val token = tokenManager.getAccessToken()
+            val apiHost = BuildConfig.API_BASE_URL.substringBefore("/api/")
+            
+            val thumbnailUrls = docs
+                .filter { it.mimeType?.startsWith("image/") == true }
+                .take(20) // Первые 20 изображений
+                .mapNotNull { doc ->
+                    doc.thumbnailUrl?.let { "$apiHost$it" }
+                        ?: "${BuildConfig.API_BASE_URL}/documents/${doc.id}/thumbnail"
+                }
+            
+            if (thumbnailUrls.isNotEmpty()) {
+                ImagePreloader.preloadImages(context, thumbnailUrls, token)
+            }
+        }
+    }
 
     private fun ensureUploadTimes(docs: List<DocumentResponse>) {
         docs.forEach { doc ->
@@ -364,3 +517,16 @@ sealed class DocumentsUiState {
     data class DocumentDetail(val detail: DocumentResponse) : DocumentsUiState()
     data class Error(val message: String) : DocumentsUiState()
 }
+
+enum class UploadStatus {
+    UPLOADING, SUCCESS, ERROR
+}
+
+data class PendingUpload(
+    val id: String,
+    val uri: Uri,
+    val filename: String,
+    val status: UploadStatus,
+    val progress: Float = 0f,
+    val error: String? = null
+)

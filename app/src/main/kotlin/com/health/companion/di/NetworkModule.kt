@@ -155,4 +155,24 @@ object NetworkModule {
     @Singleton
     @Provides
     fun providePushApi(retrofit: Retrofit): PushApi = retrofit.create(PushApi::class.java)
+    
+    @Singleton
+    @Provides
+    fun provideAttachmentsApi(retrofit: Retrofit): com.health.companion.data.remote.api.AttachmentsApi = 
+        retrofit.create(com.health.companion.data.remote.api.AttachmentsApi::class.java)
+    
+    @Singleton
+    @Provides
+    fun provideWellnessApi(retrofit: Retrofit): com.health.companion.data.remote.api.WellnessApi = 
+        retrofit.create(com.health.companion.data.remote.api.WellnessApi::class.java)
+    
+    @Singleton
+    @Provides
+    fun provideLifeContextApi(retrofit: Retrofit): com.health.companion.data.remote.api.LifeContextApi = 
+        retrofit.create(com.health.companion.data.remote.api.LifeContextApi::class.java)
+    
+    @Singleton
+    @Provides
+    fun provideMedicalApi(retrofit: Retrofit): com.health.companion.data.remote.api.MedicalApi = 
+        retrofit.create(com.health.companion.data.remote.api.MedicalApi::class.java)
 }

@@ -30,6 +30,18 @@ import com.health.companion.data.repositories.ProfileRepository
 import com.health.companion.data.repositories.ProfileRepositoryImpl
 import com.health.companion.data.repositories.PushRepository
 import com.health.companion.data.repositories.PushRepositoryImpl
+import com.health.companion.data.repositories.AttachmentsRepository
+import com.health.companion.data.repositories.AttachmentsRepositoryImpl
+import com.health.companion.data.remote.api.AttachmentsApi
+import com.health.companion.data.remote.api.WellnessApi
+import com.health.companion.data.repositories.WellnessRepository
+import com.health.companion.data.repositories.WellnessRepositoryImpl
+import com.health.companion.data.remote.api.LifeContextApi
+import com.health.companion.data.remote.api.MedicalApi
+import com.health.companion.data.repositories.LifeContextRepository
+import com.health.companion.data.repositories.LifeContextRepositoryImpl
+import com.health.companion.data.repositories.MedicalRepository
+import com.health.companion.data.repositories.MedicalRepositoryImpl
 import com.health.companion.services.WebSocketManager
 import com.health.companion.utils.TokenManager
 import okhttp3.OkHttpClient
@@ -101,4 +113,29 @@ object RepositoryModule {
     fun providePushRepository(
         pushApi: PushApi
     ): PushRepository = PushRepositoryImpl(pushApi)
+    
+    @Singleton
+    @Provides
+    fun provideAttachmentsRepository(
+        attachmentsApi: AttachmentsApi,
+        @ApplicationContext context: Context
+    ): AttachmentsRepository = AttachmentsRepositoryImpl(attachmentsApi, context)
+    
+    @Singleton
+    @Provides
+    fun provideWellnessRepository(
+        wellnessApi: WellnessApi
+    ): WellnessRepository = WellnessRepositoryImpl(wellnessApi)
+    
+    @Singleton
+    @Provides
+    fun provideLifeContextRepository(
+        lifeContextApi: LifeContextApi
+    ): LifeContextRepository = LifeContextRepositoryImpl(lifeContextApi)
+    
+    @Singleton
+    @Provides
+    fun provideMedicalRepository(
+        medicalApi: MedicalApi
+    ): MedicalRepository = MedicalRepositoryImpl(medicalApi)
 }

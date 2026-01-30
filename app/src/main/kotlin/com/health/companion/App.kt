@@ -2,12 +2,18 @@ package com.health.companion
 
 import android.app.Application
 import android.util.Log
+import coil.Coil
+import coil.ImageLoader
 import dagger.hilt.android.HiltAndroidApp
 import com.health.companion.utils.CrashLogger
 import timber.log.Timber
+import javax.inject.Inject
 
 @HiltAndroidApp
 class App : Application() {
+    
+    @Inject
+    lateinit var imageLoader: ImageLoader
     
     override fun onCreate() {
         super.onCreate()
@@ -21,7 +27,10 @@ class App : Application() {
             Timber.plant(ProductionTree())
         }
         
-        Timber.d("AI Health Companion App initialized")
+        // Настраиваем Coil как глобальный ImageLoader
+        Coil.setImageLoader(imageLoader)
+        
+        Timber.d("AI Health Companion App initialized with optimized image caching")
     }
 }
 
