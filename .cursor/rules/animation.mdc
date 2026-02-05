@@ -1,0 +1,100 @@
+---
+description: Animation Guidelines — анимации, duration, easing
+globs:
+  - app/src/**/ui/**/*.kt
+  - app/src/**/presentation/**/*.kt
+  - app/src/**/screens/**/*.kt
+  - app/src/**/components/**/*.kt
+alwaysApply: false
+---
+
+# Animation Guidelines
+
+## ⏱️ Duration
+
+```kotlin
+object AnimationDuration {
+    const val FAST = 150      // toggle, ripple
+    const val NORMAL = 300    // 90% анимаций
+    const val MODERATE = 500  // навигация
+}
+```
+
+**Правило:** Используй `NORMAL` если сомневаешься.
+
+---
+
+## 🎨 Easing
+
+```kotlin
+object AppEasing {
+    val Standard = CubicBezierEasing(0.4f, 0.0f, 0.2f, 1f)   // Универсальное
+    val Decelerate = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1f) // Появление
+    val Accelerate = CubicBezierEasing(0.4f, 0.0f, 1f, 1f)   // Исчезновение
+}
+```
+
+| Easing | Когда использовать |
+|--------|-------------------|
+| `Standard` | fade, color change |
+| `Decelerate` | элементы **появляются** |
+| `Accelerate` | элементы **исчезают** |
+
+---
+
+## 🎬 Шпаргалка
+
+| Сценарий | Анимация | Duration | Easing |
+|----------|----------|----------|--------|
+| Появление карточки | fadeIn + slideInVertically | NORMAL | Decelerate |
+| Исчезновение | fadeOut + slideOutVertically | NORMAL | Accelerate |
+| Навигация вперёд | slideInHorizontally + fadeIn | MODERATE | Decelerate |
+| Смена цвета | animateColorAsState | NORMAL | Standard |
+| Press эффект | scale (spring) | - | Spring |
+| Bottom Sheet | slideInVertically + fadeIn | MODERATE | Decelerate |
+
+---
+
+## 📦 Примеры
+
+### Появление карточки
+
+```kotlin
+AnimatedVisibility(
+    visible = visible,
+    enter = fadeIn(
+        tween(AnimationDuration.NORMAL, easing = AppEasing.Standard)
+    ) + slideInVertically(
+        initialOffsetY = { it / 3 },
+        animationSpec = tween(AnimationDuration.NORMAL, easing = AppEasing.Decelerate)
+    )
+)
+```
+
+### Press эффект
+
+```kotlin
+val scale = remember { Animatable(1f) }
+// onPress -> scale.animateTo(0.95f, spring())
+// onRelease -> scale.animateTo(1f)
+```
+
+### Смена цвета
+
+```kotlin
+val color by animateColorAsState(
+    targetValue = if (selected) primary else surface,
+    animationSpec = tween(AnimationDuration.NORMAL),
+    label = "color"
+)
+```
+
+---
+
+## ✅ Чеклист
+
+- [ ] `AnimationDuration.*` вместо произвольных ms
+- [ ] `AppEasing.*` вместо дефолтного easing
+- [ ] Есть `label` в `animate*AsState`
+- [ ] Анимация < 500ms
+- [ ] Не линейная (есть easing)

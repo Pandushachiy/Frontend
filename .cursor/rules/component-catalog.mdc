@@ -1,0 +1,114 @@
+---
+description: Component Catalog — готовые UI компоненты
+globs:
+  - app/src/**/ui/**/*.kt
+  - app/src/**/presentation/**/*.kt
+  - app/src/**/screens/**/*.kt
+  - app/src/**/components/**/*.kt
+alwaysApply: false
+---
+
+# Component Catalog - Готовые компоненты
+
+## 📋 Список компонентов
+
+| Компонент | Назначение |
+|-----------|------------|
+| `AppTopBar` | Верхняя панель с кнопкой назад |
+| `AppButton` | Кнопка с анимацией (Primary/Secondary/Outline/Text) |
+| `AppCard` | Карточка с анимацией появления |
+| `AppTextField` | Текстовое поле с валидацией и ошибками |
+| `AppBottomSheet` | Модальное окно снизу |
+| `AppDialog` | Диалог подтверждения |
+| `SettingsCard` | Карточка настроек с иконкой |
+| `AppAvatar` | Аватар (картинка/инициалы) |
+| `AppChip` | Чипы/теги с анимацией |
+| `EmptyState` | Пустое состояние списков |
+| `LoadingIndicator` | Индикатор загрузки с overlay |
+
+---
+
+## 🔘 AppButton
+
+```kotlin
+AppButton(
+    text = "Сохранить",
+    onClick = { },
+    loading = false,
+    variant = ButtonVariant.Primary, // Primary/Secondary/Outline/Text
+    icon = Icons.Default.Add
+)
+```
+
+---
+
+## 🃏 AppCard
+
+```kotlin
+AppCard(
+    onClick = { },
+    animateAppearance = true
+) {
+    Text("Контент")
+}
+```
+
+---
+
+## ✏️ AppTextField
+
+```kotlin
+AppTextField(
+    value = email,
+    onValueChange = { email = it },
+    label = "Email",
+    error = emailError,
+    leadingIcon = Icons.Default.Email
+)
+```
+
+---
+
+## ⚙️ SettingsCard
+
+```kotlin
+SettingsCard(
+    icon = Icons.Default.Person,
+    title = "Профиль",
+    description = "Настройки аккаунта",
+    onClick = { }
+)
+```
+
+---
+
+## 🗂️ EmptyState
+
+```kotlin
+EmptyState(
+    icon = Icons.Default.Inbox,
+    title = "Нет данных",
+    description = "Здесь пока пусто",
+    actionText = "Добавить",
+    onActionClick = { }
+)
+```
+
+---
+
+## ⏳ LoadingIndicator
+
+```kotlin
+LoadingIndicator(
+    visible = isLoading,
+    overlay = true
+)
+```
+
+---
+
+## ✅ Правила
+
+1. **Всегда используй готовые компоненты** вместо создания новых
+2. **Параметризуй** через параметры
+3. **Анимируй** где улучшает UX

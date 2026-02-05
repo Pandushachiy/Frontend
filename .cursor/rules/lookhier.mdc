@@ -1,0 +1,29 @@
+---
+description: UI Task Checklist — перед UI работой смотри гайды
+globs:
+  - app/src/**/screens/**/*.kt
+  - app/src/**/components/**/*.kt
+alwaysApply: false
+---
+
+# 🎯 Перед UI работой — проверь гайды!
+
+## Requestable Rules:
+1. **design-system.mdc** — цвета, типографика, отступы
+2. **component-catalog.mdc** — готовые компоненты
+3. **animation.mdc** — анимации, duration, easing
+
+## Быстрые правила:
+
+### ❌ НЕ делай:
+- `Color(0xFF...)` → используй `MaterialTheme.colorScheme.*`
+- `fontSize = 16.sp` → используй `MaterialTheme.typography.*`
+- `padding(12.dp)` → используй `Spacing.*`
+- Новые компоненты → используй готовые из каталога
+
+### ✅ Делай:
+- Все цвета через `MaterialTheme.colorScheme`
+- Все стили через `MaterialTheme.typography`
+- Все отступы через `Spacing.*`
+- Все скругления через `CornerRadius.*`
+- Анимации через `AnimationDuration.*` + `AppEasing.*`
