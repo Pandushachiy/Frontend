@@ -162,9 +162,8 @@ data class MessageDTO(
     val tokens_used: Int? = null,
     val processing_time: Int? = null,
     val created_at: String? = null,  // Nullable — backend может не возвращать
-    @SerialName("image_url")
-    val imageUrl: String? = null,  // URL сгенерированной картинки от AI
-    val images: List<String>? = null  // Прикреплённые пользователем изображения (uri/base64)
+    val imageUrl: String? = null,  // URL сгенерированной картинки от AI (camelCase от бэка)
+    val images: List<String>? = null  // Прикреплённые пользователем изображения
 )
 
 @Serializable
