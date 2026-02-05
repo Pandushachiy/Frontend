@@ -13,6 +13,7 @@ data class ConversationEntity(
     val title: String,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    val lastMessageAt: Long? = null,  // Время последнего сообщения
     val isArchived: Boolean = false,
     val isPinned: Boolean = false,
     val summary: String? = null
@@ -45,7 +46,8 @@ data class ChatMessageEntity(
     val tokensUsed: Int? = null,
     val processingTime: Int? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val imageUrl: String? = null  // URL сгенерированного AI изображения
+    val imageUrl: String? = null,  // URL сгенерированного AI изображения
+    val images: String? = null  // JSON array URLs прикреплённых пользователем изображений
 )
 
 @Entity(tableName = "health_metrics")

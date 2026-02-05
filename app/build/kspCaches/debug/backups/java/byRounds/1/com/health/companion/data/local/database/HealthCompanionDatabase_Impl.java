@@ -50,17 +50,17 @@ public final class HealthCompanionDatabase_Impl extends HealthCompanionDatabase 
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(3) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(6) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS `conversations` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL, `isPinned` INTEGER NOT NULL, `summary` TEXT, PRIMARY KEY(`id`))");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `chat_messages` (`id` TEXT NOT NULL, `conversationId` TEXT NOT NULL, `content` TEXT NOT NULL, `role` TEXT NOT NULL, `agentName` TEXT, `confidence` REAL, `sources` TEXT, `provider` TEXT, `providerColor` TEXT, `modelUsed` TEXT, `tokensUsed` INTEGER, `processingTime` INTEGER, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`conversationId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `conversations` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastMessageAt` INTEGER, `isArchived` INTEGER NOT NULL, `isPinned` INTEGER NOT NULL, `summary` TEXT, PRIMARY KEY(`id`))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `chat_messages` (`id` TEXT NOT NULL, `conversationId` TEXT NOT NULL, `content` TEXT NOT NULL, `role` TEXT NOT NULL, `agentName` TEXT, `confidence` REAL, `sources` TEXT, `provider` TEXT, `providerColor` TEXT, `modelUsed` TEXT, `tokensUsed` INTEGER, `processingTime` INTEGER, `createdAt` INTEGER NOT NULL, `imageUrl` TEXT, `images` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`conversationId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_chat_messages_conversationId` ON `chat_messages` (`conversationId`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `health_metrics` (`id` TEXT NOT NULL, `metricType` TEXT NOT NULL, `value` REAL NOT NULL, `unit` TEXT NOT NULL, `source` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `mood_entries` (`id` TEXT NOT NULL, `moodLevel` INTEGER NOT NULL, `symptoms` TEXT NOT NULL, `journalText` TEXT NOT NULL, `stressLevel` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `documents` (`id` TEXT NOT NULL, `filename` TEXT NOT NULL, `documentType` TEXT NOT NULL, `status` TEXT NOT NULL, `extractedText` TEXT, `filePath` TEXT NOT NULL, `uploadedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '444f61289a21d2061864851ac7d4d6fd')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3c0a75eac9544180f9a2a8cbf7b10243')");
       }
 
       @Override
@@ -114,11 +114,12 @@ public final class HealthCompanionDatabase_Impl extends HealthCompanionDatabase 
       @NonNull
       public RoomOpenHelper.ValidationResult onValidateSchema(
           @NonNull final SupportSQLiteDatabase db) {
-        final HashMap<String, TableInfo.Column> _columnsConversations = new HashMap<String, TableInfo.Column>(7);
+        final HashMap<String, TableInfo.Column> _columnsConversations = new HashMap<String, TableInfo.Column>(8);
         _columnsConversations.put("id", new TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsConversations.put("title", new TableInfo.Column("title", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsConversations.put("createdAt", new TableInfo.Column("createdAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsConversations.put("updatedAt", new TableInfo.Column("updatedAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsConversations.put("lastMessageAt", new TableInfo.Column("lastMessageAt", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsConversations.put("isArchived", new TableInfo.Column("isArchived", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsConversations.put("isPinned", new TableInfo.Column("isPinned", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsConversations.put("summary", new TableInfo.Column("summary", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -131,7 +132,7 @@ public final class HealthCompanionDatabase_Impl extends HealthCompanionDatabase 
                   + " Expected:\n" + _infoConversations + "\n"
                   + " Found:\n" + _existingConversations);
         }
-        final HashMap<String, TableInfo.Column> _columnsChatMessages = new HashMap<String, TableInfo.Column>(13);
+        final HashMap<String, TableInfo.Column> _columnsChatMessages = new HashMap<String, TableInfo.Column>(15);
         _columnsChatMessages.put("id", new TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsChatMessages.put("conversationId", new TableInfo.Column("conversationId", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsChatMessages.put("content", new TableInfo.Column("content", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -145,6 +146,8 @@ public final class HealthCompanionDatabase_Impl extends HealthCompanionDatabase 
         _columnsChatMessages.put("tokensUsed", new TableInfo.Column("tokensUsed", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsChatMessages.put("processingTime", new TableInfo.Column("processingTime", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsChatMessages.put("createdAt", new TableInfo.Column("createdAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsChatMessages.put("imageUrl", new TableInfo.Column("imageUrl", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsChatMessages.put("images", new TableInfo.Column("images", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         final HashSet<TableInfo.ForeignKey> _foreignKeysChatMessages = new HashSet<TableInfo.ForeignKey>(1);
         _foreignKeysChatMessages.add(new TableInfo.ForeignKey("conversations", "CASCADE", "NO ACTION", Arrays.asList("conversationId"), Arrays.asList("id")));
         final HashSet<TableInfo.Index> _indicesChatMessages = new HashSet<TableInfo.Index>(1);
@@ -207,7 +210,7 @@ public final class HealthCompanionDatabase_Impl extends HealthCompanionDatabase 
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "444f61289a21d2061864851ac7d4d6fd", "d5e6649d05155bf367d904771bcd7036");
+    }, "3c0a75eac9544180f9a2a8cbf7b10243", "c1436b79fcca446938464fad6d64ecc5");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;

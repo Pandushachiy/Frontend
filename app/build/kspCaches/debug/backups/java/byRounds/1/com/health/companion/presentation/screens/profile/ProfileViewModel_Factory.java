@@ -1,6 +1,6 @@
 package com.health.companion.presentation.screens.profile;
 
-import com.health.companion.data.repositories.ProfileRepository;
+import com.health.companion.data.repositories.LifeContextRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -22,23 +22,23 @@ import javax.inject.Provider;
     "KotlinInternalInJava"
 })
 public final class ProfileViewModel_Factory implements Factory<ProfileViewModel> {
-  private final Provider<ProfileRepository> profileRepositoryProvider;
+  private final Provider<LifeContextRepository> repositoryProvider;
 
-  public ProfileViewModel_Factory(Provider<ProfileRepository> profileRepositoryProvider) {
-    this.profileRepositoryProvider = profileRepositoryProvider;
+  public ProfileViewModel_Factory(Provider<LifeContextRepository> repositoryProvider) {
+    this.repositoryProvider = repositoryProvider;
   }
 
   @Override
   public ProfileViewModel get() {
-    return newInstance(profileRepositoryProvider.get());
+    return newInstance(repositoryProvider.get());
   }
 
   public static ProfileViewModel_Factory create(
-      Provider<ProfileRepository> profileRepositoryProvider) {
-    return new ProfileViewModel_Factory(profileRepositoryProvider);
+      Provider<LifeContextRepository> repositoryProvider) {
+    return new ProfileViewModel_Factory(repositoryProvider);
   }
 
-  public static ProfileViewModel newInstance(ProfileRepository profileRepository) {
-    return new ProfileViewModel(profileRepository);
+  public static ProfileViewModel newInstance(LifeContextRepository repository) {
+    return new ProfileViewModel(repository);
   }
 }

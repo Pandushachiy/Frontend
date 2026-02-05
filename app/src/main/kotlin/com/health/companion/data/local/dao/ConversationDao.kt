@@ -17,10 +17,10 @@ interface ConversationDao {
     @Update
     suspend fun update(conversation: ConversationEntity)
     
-    @Query("SELECT * FROM conversations ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM conversations ORDER BY COALESCE(lastMessageAt, updatedAt) DESC")
     fun getAllConversationsFlow(): Flow<List<ConversationEntity>>
     
-    @Query("SELECT * FROM conversations ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM conversations ORDER BY COALESCE(lastMessageAt, updatedAt) DESC")
     suspend fun getAllConversations(): List<ConversationEntity>
     
     @Query("SELECT * FROM conversations WHERE id = :conversationId")
@@ -29,7 +29,7 @@ interface ConversationDao {
     @Query("DELETE FROM conversations WHERE id = :conversationId")
     suspend fun deleteById(conversationId: String)
 
-    @Query("UPDATE conversations SET updatedAt = :updatedAt WHERE id = :conversationId")
+    @Query("UPDATE conversations SET updatedAt = :updatedAt, lastMessageAt = :updatedAt WHERE id = :conversationId")
     suspend fun updateUpdatedAt(conversationId: String, updatedAt: Long)
     
     @Query("UPDATE conversations SET title = :title, updatedAt = :updatedAt WHERE id = :conversationId")

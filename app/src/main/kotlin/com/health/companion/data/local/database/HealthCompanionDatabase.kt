@@ -17,7 +17,7 @@ import com.health.companion.data.local.dao.MoodEntryDao
         MoodEntryEntity::class,
         DocumentEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

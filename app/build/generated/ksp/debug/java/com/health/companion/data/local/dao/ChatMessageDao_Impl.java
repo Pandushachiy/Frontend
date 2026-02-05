@@ -48,7 +48,7 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `chat_messages` (`id`,`conversationId`,`content`,`role`,`agentName`,`confidence`,`sources`,`provider`,`providerColor`,`modelUsed`,`tokensUsed`,`processingTime`,`createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `chat_messages` (`id`,`conversationId`,`content`,`role`,`agentName`,`confidence`,`sources`,`provider`,`providerColor`,`modelUsed`,`tokensUsed`,`processingTime`,`createdAt`,`imageUrl`,`images`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -99,6 +99,16 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
           statement.bindLong(12, entity.getProcessingTime());
         }
         statement.bindLong(13, entity.getCreatedAt());
+        if (entity.getImageUrl() == null) {
+          statement.bindNull(14);
+        } else {
+          statement.bindString(14, entity.getImageUrl());
+        }
+        if (entity.getImages() == null) {
+          statement.bindNull(15);
+        } else {
+          statement.bindString(15, entity.getImages());
+        }
       }
     };
     this.__preparedStmtOfDeleteByConversation = new SharedSQLiteStatement(__db) {
@@ -264,6 +274,8 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
           final int _cursorIndexOfTokensUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "tokensUsed");
           final int _cursorIndexOfProcessingTime = CursorUtil.getColumnIndexOrThrow(_cursor, "processingTime");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
+          final int _cursorIndexOfImageUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "imageUrl");
+          final int _cursorIndexOfImages = CursorUtil.getColumnIndexOrThrow(_cursor, "images");
           final List<ChatMessageEntity> _result = new ArrayList<ChatMessageEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final ChatMessageEntity _item;
@@ -325,7 +337,19 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
             }
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
-            _item = new ChatMessageEntity(_tmpId,_tmpConversationId,_tmpContent,_tmpRole,_tmpAgentName,_tmpConfidence,_tmpSources,_tmpProvider,_tmpProviderColor,_tmpModelUsed,_tmpTokensUsed,_tmpProcessingTime,_tmpCreatedAt);
+            final String _tmpImageUrl;
+            if (_cursor.isNull(_cursorIndexOfImageUrl)) {
+              _tmpImageUrl = null;
+            } else {
+              _tmpImageUrl = _cursor.getString(_cursorIndexOfImageUrl);
+            }
+            final String _tmpImages;
+            if (_cursor.isNull(_cursorIndexOfImages)) {
+              _tmpImages = null;
+            } else {
+              _tmpImages = _cursor.getString(_cursorIndexOfImages);
+            }
+            _item = new ChatMessageEntity(_tmpId,_tmpConversationId,_tmpContent,_tmpRole,_tmpAgentName,_tmpConfidence,_tmpSources,_tmpProvider,_tmpProviderColor,_tmpModelUsed,_tmpTokensUsed,_tmpProcessingTime,_tmpCreatedAt,_tmpImageUrl,_tmpImages);
             _result.add(_item);
           }
           return _result;
@@ -368,6 +392,8 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
           final int _cursorIndexOfTokensUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "tokensUsed");
           final int _cursorIndexOfProcessingTime = CursorUtil.getColumnIndexOrThrow(_cursor, "processingTime");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
+          final int _cursorIndexOfImageUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "imageUrl");
+          final int _cursorIndexOfImages = CursorUtil.getColumnIndexOrThrow(_cursor, "images");
           final List<ChatMessageEntity> _result = new ArrayList<ChatMessageEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final ChatMessageEntity _item;
@@ -429,7 +455,19 @@ public final class ChatMessageDao_Impl implements ChatMessageDao {
             }
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
-            _item = new ChatMessageEntity(_tmpId,_tmpConversationId,_tmpContent,_tmpRole,_tmpAgentName,_tmpConfidence,_tmpSources,_tmpProvider,_tmpProviderColor,_tmpModelUsed,_tmpTokensUsed,_tmpProcessingTime,_tmpCreatedAt);
+            final String _tmpImageUrl;
+            if (_cursor.isNull(_cursorIndexOfImageUrl)) {
+              _tmpImageUrl = null;
+            } else {
+              _tmpImageUrl = _cursor.getString(_cursorIndexOfImageUrl);
+            }
+            final String _tmpImages;
+            if (_cursor.isNull(_cursorIndexOfImages)) {
+              _tmpImages = null;
+            } else {
+              _tmpImages = _cursor.getString(_cursorIndexOfImages);
+            }
+            _item = new ChatMessageEntity(_tmpId,_tmpConversationId,_tmpContent,_tmpRole,_tmpAgentName,_tmpConfidence,_tmpSources,_tmpProvider,_tmpProviderColor,_tmpModelUsed,_tmpTokensUsed,_tmpProcessingTime,_tmpCreatedAt,_tmpImageUrl,_tmpImages);
             _result.add(_item);
           }
           return _result;

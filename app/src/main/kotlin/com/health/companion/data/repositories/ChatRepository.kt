@@ -15,6 +15,8 @@ import com.health.companion.data.remote.api.MessageDTO
 import com.health.companion.services.WebSocketManager
 import com.health.companion.services.WebSocketMessage
 import com.health.companion.utils.TokenManager
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -433,7 +435,10 @@ class ChatRepositoryImpl @Inject constructor(
                     provider_color = entity.providerColor,
                     model_used = entity.modelUsed,
                     created_at = entity.createdAt.toString(),
-                    imageUrl = entity.imageUrl  // Читаем URL изображения из БД
+                    imageUrl = entity.imageUrl,  // Читаем URL изображения из БД
+                    images = entity.images?.let { 
+                        try { Json.decodeFromString<List<String>>(it) } catch (e: Exception) { null }
+                    }
                 )
             }
         }
@@ -477,6 +482,7 @@ class ChatRepositoryImpl @Inject constructor(
                 // Parse ISO datetime from backend (e.g. "2026-02-03T17:39:00Z")
                 val createdMs = dto.created_at?.let { parseIsoDateTime(it) } ?: now
                 val updatedMs = dto.updated_at?.let { parseIsoDateTime(it) } ?: createdMs
+                val lastMsgMs = dto.last_message_at?.let { parseIsoDateTime(it) }
                 
                 conversationDao.insert(
                     ConversationEntity(
@@ -484,6 +490,7 @@ class ChatRepositoryImpl @Inject constructor(
                         title = dto.title.ifBlank { "Новый чат" },
                         createdAt = createdMs,
                         updatedAt = updatedMs,
+                        lastMessageAt = lastMsgMs ?: updatedMs,  // fallback к updatedAt
                         isArchived = dto.is_archived,
                         isPinned = dto.is_pinned,
                         summary = dto.summary
@@ -541,10 +548,10 @@ class ChatRepositoryImpl @Inject constructor(
             val response = chatApi.getMessages(conversationId)
             android.util.Log.d("SYNC_MESSAGES", "📥 Loaded ${response.size} messages for $conversationId")
             response.forEachIndexed { index, msg ->
-                android.util.Log.d("SYNC_MESSAGES", "  [$index] role=${msg.role}, imageUrl=${msg.imageUrl}, content=${msg.content.take(50)}...")
+                android.util.Log.d("SYNC_MESSAGES", "  [$index] role=${msg.role}, imageUrl=${msg.imageUrl}, images=${msg.images}, content=${msg.content.take(50)}...")
             }
+            
             val entities = response.map { msg ->
-                // Парсим время — может быть ISO datetime или timestamp
                 val createdMs = msg.created_at?.let { 
                     it.toLongOrNull() ?: parseIsoDateTime(it) 
                 } ?: System.currentTimeMillis()
@@ -559,7 +566,8 @@ class ChatRepositoryImpl @Inject constructor(
                     providerColor = msg.provider_color,
                     modelUsed = msg.model_used,
                     createdAt = createdMs,
-                    imageUrl = msg.imageUrl  // Сохраняем URL сгенерированного изображения
+                    imageUrl = msg.imageUrl,  // URL от бэкенда
+                    images = msg.images?.let { Json.encodeToString(it) }  // URLs от бэкенда
                 )
             }
             chatMessageDao.insertAll(entities)

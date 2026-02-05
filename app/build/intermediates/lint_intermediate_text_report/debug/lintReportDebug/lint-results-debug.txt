@@ -1,0 +1,862 @@
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\utils\VoiceEventLogger.kt:19: Warning: Consider using apply() instead; commit writes its data to persistent storage immediately, whereas apply will handle it in the background [ApplySharedPref]
+        prefs.edit().putString(KEY, lines.joinToString("\n")).commit()
+                                                              ~~~~~~~~
+
+   Explanation for issues of type "ApplySharedPref":
+   Consider using apply() instead of commit on shared preferences. Whereas
+   commit blocks and writes its data to persistent storage immediately, apply
+   will handle it in the background.
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\SessionAttachmentsSheet.kt:369: Warning: Implicitly using the default locale is a common source of bugs: Use String.format(Locale, ...) instead [DefaultLocale]
+        else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\wellness\WellnessScreen.kt:756: Warning: Implicitly using the default locale is a common source of bugs: Use String.format(Locale, ...) instead [DefaultLocale]
+            value = String.format("%.1f", stats.averageMood),
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "DefaultLocale":
+   Calling String#toLowerCase() or #toUpperCase() without specifying an
+   explicit locale is a common source of bugs. The reason for that is that
+   those methods will use the current locale on the user's device, and even
+   though the code appears to work correctly when you are developing the app,
+   it will fail in some locales. For example, in the Turkish locale, the
+   uppercase replacement for i is not I.
+
+   If you want the methods to just perform ASCII replacement, for example to
+   convert an enum name, call String#toUpperCase(Locale.ROOT) instead. If you
+   really want to use the current locale, call
+   String#toUpperCase(Locale.getDefault()) instead.
+
+   https://developer.android.com/reference/java/util/Locale.html#default_locale
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\services\HealthCompanionMessagingService.kt:74: Error: When targeting Android 13 or higher, posting a permission requires holding the POST_NOTIFICATIONS permission [NotificationPermission]
+        notificationManager.notify(NOTIFICATION_ID, notification)
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "NotificationPermission":
+   When targeting Android 13 and higher, posting permissions requires holding
+   the runtime permission android.permission.POST_NOTIFICATIONS.
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:17: Warning: Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the android.os.Build.VERSION_CODES javadoc for details. [OldTargetApi]
+        targetSdk = 34
+        ~~~~~~~~~~~~~~
+
+   Explanation for issues of type "OldTargetApi":
+   When your application or sdk runs on a version of Android that is more
+   recent than your targetSdkVersion specifies that it has been tested with,
+   various compatibility modes kick in. This ensures that your application
+   continues to work, but it may look out of place. For example, if the
+   targetSdkVersion is less than 14, your app may get an option button in the
+   UI.
+
+   To fix this issue, set the targetSdkVersion to the highest available value.
+   Then test your app to make sure everything works correctly. You may want to
+   consult the compatibility notes to see what changes apply to each version
+   you are adding support for:
+   https://developer.android.com/reference/android/os/Build.VERSION_CODES.html
+   as well as follow this guide:
+   https://developer.android.com/distribute/best-practices/develop/target-sdk.
+   html
+
+   https://developer.android.com/distribute/best-practices/develop/target-sdk.html
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1964: Error: Suspicious indentation: This is indented but is not continuing the previous expression (val rotation by infi...) [SuspiciousIndentation]
+        Box(
+        ~~~~
+    C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1954: Previous statement here
+
+   Explanation for issues of type "SuspiciousIndentation":
+   This check looks for cases where the indentation suggests a grouping that
+   isn't actually there in the code. A common example of this would be
+   something like
+   if (column > width)
+       line++
+       column = 0
+   Here, the column = 0 line will be executed every single time, not just if
+   the condition is true.
+
+   Available options:
+
+   **always-run** (default is false):
+   Whether this check should be included while editing.
+
+   While you're editing, it's common to have a temporary situation where you have suspicious indentation scenarios -- e.g. you start typing an `if` statement on the line above something you want to make conditional, and you haven't indented it yet. It can be distracting and misleading to suddenly have both statements light up as errors. Therefore, lint will avoid including this check when running on the fly in the editor, unless it looks like the file has not been recently edited. With this option, you can turn it on in all cases.
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="SuspiciousIndentation">
+           <option name="always-run" value="false" />
+       </issue>
+   </lint>
+   ```
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\utils\VoiceEventLogger.kt:35: Warning: Consider adding a <queries> declaration to your manifest when calling this method; see https://g.co/dev/packagevisibility for details [QueryPermissionsNeeded]
+        val handlers = pm.queryIntentActivities(recIntent, 0)
+                          ~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "QueryPermissionsNeeded":
+   Apps that target Android 11 cannot query or interact with other installed
+   apps by default. If you need to query or interact with other installed
+   apps, you may need to add a <queries> declaration in your manifest.
+
+   As a corollary, the methods PackageManager#getInstalledPackages and
+   PackageManager#getInstalledApplications will no longer return information
+   about all installed apps. To query specific apps or types of apps, you can
+   use methods like PackageManager#getPackageInfo or
+   PackageManager#queryIntentActivities.
+
+   https://g.co/dev/packagevisibility
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\AndroidManifest.xml:50: Warning: Redundant label can be removed [RedundantLabel]
+            android:label="@string/app_name"
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "RedundantLabel":
+   When an activity does not have a label attribute, it will use the one from
+   the application tag. Since the application has already specified the same
+   label, the label on this activity can be omitted.
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\AndroidManifest.xml:20: Warning: Your app is currently not handling Selected Photos Access introduced in Android 14+ [SelectedPhotoAccess]
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "SelectedPhotoAccess":
+   Selected Photo Access is a new ability for users to share partial access to
+   their photo library when apps request access to their device storage on
+   Android 14+.
+
+   Instead of letting the system manage the selection lifecycle, we recommend
+   you adapt your app to handle partial access to the photo library.
+
+   https://developer.android.com/about/versions/14/changes/partial-photo-video-access
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:12: Warning: A newer version of compileSdkVersion than 34 is available: 36 [GradleDependency]
+    compileSdk = 34
+    ~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:99: Warning: A newer version of androidx.activity:activity-compose than 1.8.2 is available: 1.12.3 [GradleDependency]
+    implementation("androidx.activity:activity-compose:1.8.2")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:100: Warning: A newer version of androidx.lifecycle:lifecycle-runtime-compose than 2.7.0 is available: 2.10.0 [GradleDependency]
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:101: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.7.0 is available: 2.10.0 [GradleDependency]
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:102: Warning: A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.7.0 is available: 2.10.0 [GradleDependency]
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:105: Warning: A newer version of androidx.navigation:navigation-compose than 2.7.7 is available: 2.9.7 [GradleDependency]
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:110: Warning: A newer version of androidx.hilt:hilt-navigation-compose than 1.1.0 is available: 1.3.0 [GradleDependency]
+    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:113: Warning: A newer version of androidx.room:room-runtime than 2.6.1 is available: 2.8.4 [GradleDependency]
+    implementation("androidx.room:room-runtime:2.6.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:114: Warning: A newer version of androidx.room:room-ktx than 2.6.1 is available: 2.8.4 [GradleDependency]
+    implementation("androidx.room:room-ktx:2.6.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:115: Warning: A newer version of androidx.room:room-compiler than 2.6.1 is available: 2.8.4 [GradleDependency]
+    ksp("androidx.room:room-compiler:2.6.1")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:126: Warning: A newer version of androidx.datastore:datastore-preferences than 1.0.0 is available: 1.2.0 [GradleDependency]
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:127: Warning: A newer version of androidx.security:security-crypto than 1.1.0-alpha06 is available: 1.1.0 [GradleDependency]
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:137: Warning: A newer version of androidx.camera:camera-core than 1.3.1 is available: 1.5.3 [GradleDependency]
+    implementation("androidx.camera:camera-core:1.3.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:138: Warning: A newer version of androidx.camera:camera-camera2 than 1.3.1 is available: 1.5.3 [GradleDependency]
+    implementation("androidx.camera:camera-camera2:1.3.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:139: Warning: A newer version of androidx.camera:camera-lifecycle than 1.3.1 is available: 1.5.3 [GradleDependency]
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:140: Warning: A newer version of androidx.camera:camera-view than 1.3.1 is available: 1.5.3 [GradleDependency]
+    implementation("androidx.camera:camera-view:1.3.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:149: Warning: A newer version of androidx.core:core-ktx than 1.12.0 is available: 1.17.0 [GradleDependency]
+    implementation("androidx.core:core-ktx:1.12.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:150: Warning: A newer version of androidx.appcompat:appcompat than 1.6.1 is available: 1.7.1 [GradleDependency]
+    implementation("androidx.appcompat:appcompat:1.6.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:157: Warning: A newer version of androidx.test.ext:junit than 1.1.5 is available: 1.3.0 [GradleDependency]
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:158: Warning: A newer version of androidx.test.espresso:espresso-core than 3.5.1 is available: 3.7.0 [GradleDependency]
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\AndroidManifest.xml:52: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
+            android:screenOrientation="portrait"
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "LockedOrientationActivity":
+   The <activity> element should not be locked to any orientation so that
+   users can take advantage of the multi-window environments and larger
+   screens available on Android. To fix the issue, consider declaring the
+   corresponding activity element with `screenOrientation="unspecified"`or
+   fullSensor attribute.
+
+   https://developer.android.com/topic/arc/window-management
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:108: Warning: A newer version of com.google.dagger:hilt-android than 2.50 is available: 2.59 [NewerVersionAvailable]
+    implementation("com.google.dagger:hilt-android:2.50")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:109: Warning: A newer version of com.google.dagger:hilt-compiler than 2.50 is available: 2.59 [NewerVersionAvailable]
+    ksp("com.google.dagger:hilt-compiler:2.50")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:118: Warning: A newer version of com.squareup.retrofit2:retrofit than 2.9.0 is available: 3.0.0 [NewerVersionAvailable]
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:119: Warning: A newer version of com.squareup.okhttp3:okhttp than 4.12.0 is available: 5.3.2 [NewerVersionAvailable]
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:120: Warning: A newer version of com.squareup.okhttp3:logging-interceptor than 4.12.0 is available: 5.3.2 [NewerVersionAvailable]
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:121: Warning: A newer version of com.squareup.okhttp3:okhttp-sse than 4.12.0 is available: 5.3.2 [NewerVersionAvailable]
+    implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:122: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-serialization-json than 1.6.2 is available: 1.10.0 [NewerVersionAvailable]
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:130: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-android than 1.7.3 is available: 1.10.2 [NewerVersionAvailable]
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:131: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-core than 1.7.3 is available: 1.10.2 [NewerVersionAvailable]
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:134: Warning: A newer version of io.coil-kt:coil-compose than 2.5.0 is available: 2.7.0 [NewerVersionAvailable]
+    implementation("io.coil-kt:coil-compose:2.5.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:143: Warning: A newer version of com.google.accompanist:accompanist-permissions than 0.34.0 is available: 0.37.3 [NewerVersionAvailable]
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:154: Warning: A newer version of io.mockk:mockk than 1.13.9 is available: 1.14.9 [NewerVersionAvailable]
+    testImplementation("io.mockk:mockk:1.13.9")
+                       ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\build.gradle.kts:155: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-test than 1.7.3 is available: 1.10.2 [NewerVersionAvailable]
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "NewerVersionAvailable":
+   This detector checks with a central repository to see if there are newer
+   versions available for the dependencies used by this project. This is
+   similar to the GradleDependency check, which checks for newer versions
+   available in the Android SDK tools and libraries, but this works with any
+   MavenCentral dependency, and connects to the library every time, which
+   makes it more flexible but also much slower.
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatBubbleV2.kt:785: Warning: Modifier parameter should be the first optional parameter [ModifierParameter from androidx.compose.ui]
+    modifier: Modifier = Modifier
+    ~~~~~~~~
+
+   Explanation for issues of type "ModifierParameter":
+   The first (or only) Modifier parameter in a Composable function should
+   follow the following rules:
+   - Be named modifier
+   - Have a type of Modifier
+   - Either have no default value, or have a default value of Modifier
+   - If optional, be the first optional parameter in the parameter list
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.ui
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\AndroidManifest.xml:52: Warning: Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios. [DiscouragedApi]
+            android:screenOrientation="portrait"
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "DiscouragedApi":
+   Discouraged APIs are allowed and are not deprecated, but they may be unfit
+   for common use (e.g. due to slow performance or subtle behavior).
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatBubbleV2.kt:229: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                            android.util.Log.d("IMAGE_DEBUG", "🖼️ ChatBubbleV2 showing imageUrl=$imageUrl")
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:228: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("SSE_DEBUG", "sendMessageStream called with message: $message, images: ${images?.size ?: 0}")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:232: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+            android.util.Log.e("SSE_DEBUG", "No access token!")
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:237: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("SSE_DEBUG", "Token OK, preparing request...")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:247: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                    android.util.Log.d("SSE_DEBUG", "Image base64 length: ${img.length}, prefix: ${img.take(50)}")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:250: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.d("SSE_DEBUG", "✅ Added ${images.size} images to request body")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:254: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("SSE_DEBUG", "Request body length: ${body.length} chars")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:257: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("SSE_DEBUG", "URL: $url")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:270: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("SSE_DEBUG", "Creating EventSource...")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:275: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                    android.util.Log.d("SSE_DEBUG", "SSE OPENED! Response: ${response.code}")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:284: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                    android.util.Log.d("SSE_DEBUG", "SSE EVENT: type=$type, data=$data")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:302: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                                android.util.Log.d("SSE_IMAGE", "IMAGE EVENT: url=$url, prompt=$prompt")
+                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:370: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                    android.util.Log.d("SSE_DEBUG", "SSE CLOSED")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\ChatRepository.kt:375: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                    android.util.Log.e("SSE_DEBUG", "SSE FAILURE! code=${response?.code}, error=${t?.message}", t)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:97: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("UI_DEBUG", "Messages recompose: size=${messages.size}, lastLen=${messages.lastOrNull()?.content?.length}")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1666: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                                    android.util.Log.e("IMAGE_LOAD", "Failed to load: $imageUriString")
+                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1780: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+    android.util.Log.d("STREAM_DIAG", "🎨 COMPOSE @${System.currentTimeMillis()} fullText.len=${fullText.length}, animate=$animationEnabled, created@$composeTime")
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1787: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("STREAM_DIAG", "🚀 ANIM START @${System.currentTimeMillis()}")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1802: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("STREAM_DIAG", "📝 RENDER visible=$visibleChars, fullLen=${fullText.length}, showing=${displayText.length}")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:235: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("CHAT_DEBUG", "sendMessage called: $text")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:240: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.d("CHAT_DEBUG", "Starting stream...")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:248: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.d("IMAGE_DEBUG", "========== SEND MESSAGE ==========")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:249: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.d("IMAGE_DEBUG", "1. Current attached URI: $currentAttachedUri")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:254: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.d("IMAGE_DEBUG", "2. Has attached image: $hasAttachedImage")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:255: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.d("IMAGE_DEBUG", "3. Base64 images count: ${attachedImages?.size ?: 0}")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:257: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                    android.util.Log.d("IMAGE_DEBUG", "4. Base64 first 100 chars: ${attachedImages.firstOrNull()?.take(100)}")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:264: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                        android.util.Log.d("IMAGE_DEBUG", "5. Saving URI string for display: ${it.first()}")
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:267: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.d("IMAGE_DEBUG", "6. attachedImageUris: $attachedImageUris")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:282: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.d("CHAT_DEBUG", "Added user message with images: ${userMessage.images}")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:301: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                        android.util.Log.d("STREAM_DIAG", "📊 STATUS: '$status'")
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:310: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                        android.util.Log.d("STREAM_DIAG", "⚡ TOKEN @$tokenTime len=${currentContent.length} chunk='${token.take(20)}'")
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:316: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                                android.util.Log.d("STREAM_DIAG", "📦 FIRST MSG ADD @${System.currentTimeMillis()} len=${currentContent.length}")
+                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:339: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                        android.util.Log.d("STREAM_DIAG", "🖼️ IMAGE RECEIVED: url='$url', prompt='$prompt'")
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:348: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                        android.util.Log.d("STREAM_DIAG", "🖼️ FULL URL: $fullUrl")
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:368: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                                android.util.Log.d("STREAM_DIAG", "🖼️ Created message with imageUrl=$fullUrl")
+                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:374: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                                android.util.Log.d("STREAM_DIAG", "🖼️ Updated message with imageUrl=$fullUrl")
+                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:483: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                    android.util.Log.e("RETRY", "Failed to restore attached image: $e")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:674: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("IMAGE_ATTACH", "Attaching image: $uri")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:682: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+        android.util.Log.d("IMAGE_ATTACH", "Removing attached image")
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:698: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+                android.util.Log.e("IMAGE_ATTACH", "Failed to decode bitmap from URI")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:735: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+            android.util.Log.d("IMAGE_ATTACH", "Converted to base64: ${paddedBase64.length} chars, original size: ${originalBitmap.width}x${originalBitmap.height}, scaled: ${scaledBitmap.width}x${scaledBitmap.height}")
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:745: Warning: Using 'Log' instead of 'Timber' [LogNotTimber from com.jakewharton.timber:timber:{version}]
+            android.util.Log.e("IMAGE_ATTACH", "Failed to convert Uri to base64", e)
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "LogNotTimber":
+   Since Timber is included in the project, it is likely that calls to Log
+   should instead be going to Timber.
+
+   Vendor: JakeWharton/timber
+   Identifier: com.jakewharton.timber:timber:{version}
+   Feedback: https://github.com/JakeWharton/timber/issues
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\xml\network_security_config.xml:9: Warning: Insecure Base Configuration [InsecureBaseConfiguration]
+    <base-config cleartextTrafficPermitted="true">
+                                            ~~~~
+
+   Explanation for issues of type "InsecureBaseConfiguration":
+   Permitting cleartext traffic could allow eavesdroppers to intercept data
+   sent by your app, which impacts the privacy of your users. Consider only
+   allowing encrypted traffic by setting the cleartextTrafficPermitted tag to
+   false.
+
+   https://goo.gle/InsecureBaseConfiguration
+   https://developer.android.com/preview/features/security-config.html
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\AndroidManifest.xml:37: Warning: The attribute android:allowBackup is deprecated from Android 12 and higher and may be removed in future versions. Consider adding the attribute android:dataExtractionRules specifying an @xml resource which configures cloud backups and device transfers on Android 12 and higher. [DataExtractionRules]
+        android:allowBackup="false"
+                             ~~~~~
+
+   Explanation for issues of type "DataExtractionRules":
+   Before Android 12, the attributes android:allowBackup and
+   android:fullBackupContent were used to configure all forms of backup,
+   including cloud backups, device-to-device transfers and adb backup.
+
+   In Android 12 and higher, these attributes have been deprecated and will
+   only apply to cloud backups. You should instead use the attribute
+   android:dataExtractionRules, specifying an @xml resource that configures
+   which files to back up, for cloud backups and for device-to-device
+   transfers, separately. If your minSdkVersion supports older versions,
+   you'll still want to specify an android:fullBackupContent resource if the
+   default behavior is not right for your app.
+
+   https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   https://goo.gle/DataExtractionRules
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1895: Warning: Unnecessary; SDK_INT is always >= 30 [ObsoleteSdkInt]
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\services\HealthCompanionMessagingService.kt:35: Warning: Unnecessary; SDK_INT is always >= 30 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\mipmap-anydpi-v26: Warning: This folder configuration (v26) is unnecessary; minSdkVersion is 30. Merge all the resources in this folder into mipmap-anydpi. [ObsoleteSdkInt]
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatBubbleV2.kt:479: Hint: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var visibleChars by remember { mutableStateOf(if (animate) 0 else content.length) }
+                                   ~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1783: Hint: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var visibleChars by remember { mutableStateOf(0) }
+                                   ~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\documents\DocumentsScreen.kt:623: Hint: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var itemHeight by remember { mutableStateOf(0) }
+                                 ~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\wellness\WellnessScreen.kt:1469: Hint: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var selectedMood by remember { mutableStateOf(3) }
+                                   ~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\wellness\WellnessScreen.kt:1627: Hint: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var selectedColorIndex by remember { mutableStateOf(0) }
+                                         ~~~~~~~~~~~~~~
+
+   Explanation for issues of type "AutoboxingStateCreation":
+   Calling mutableStateOf<T>() when T is either backed by a primitive type on
+   the JVM or is a value class results in a state implementation that requires
+   all state values to be boxed. This usually causes an additional allocation
+   for each state write, and adds some additional work to auto-unbox values
+   when reading the value of the state. Instead, prefer to use a specialized
+   primitive state implementation for Int, Long, Float, and Double when the
+   state does not need to track null values and does not override the default
+   SnapshotMutationPolicy. See mutableIntStateOf(), mutableLongStateOf(),
+   mutableFloatStateOf(), and mutableDoubleStateOf() for more information.
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.runtime
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:4: Warning: The resource R.color.primary appears to be unused [UnusedResources]
+    <color name="primary">#32B8C6</color>
+           ~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:5: Warning: The resource R.color.primary_dark appears to be unused [UnusedResources]
+    <color name="primary_dark">#218084</color>
+           ~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:6: Warning: The resource R.color.primary_light appears to be unused [UnusedResources]
+    <color name="primary_light">#5FD4E0</color>
+           ~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:9: Warning: The resource R.color.secondary appears to be unused [UnusedResources]
+    <color name="secondary">#5E5240</color>
+           ~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:10: Warning: The resource R.color.secondary_light appears to be unused [UnusedResources]
+    <color name="secondary_light">#8A7B65</color>
+           ~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:13: Warning: The resource R.color.tertiary appears to be unused [UnusedResources]
+    <color name="tertiary">#C0002F</color>
+           ~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:16: Warning: The resource R.color.background_light appears to be unused [UnusedResources]
+    <color name="background_light">#FCFCF9</color>
+           ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:17: Warning: The resource R.color.background_dark appears to be unused [UnusedResources]
+    <color name="background_dark">#1F2121</color>
+           ~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:20: Warning: The resource R.color.surface_light appears to be unused [UnusedResources]
+    <color name="surface_light">#FFFFFF</color>
+           ~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:21: Warning: The resource R.color.surface_dark appears to be unused [UnusedResources]
+    <color name="surface_dark">#262828</color>
+           ~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:24: Warning: The resource R.color.on_background_light appears to be unused [UnusedResources]
+    <color name="on_background_light">#133439</color>
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:25: Warning: The resource R.color.on_background_dark appears to be unused [UnusedResources]
+    <color name="on_background_dark">#F5F5F5</color>
+           ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:28: Warning: The resource R.color.success appears to be unused [UnusedResources]
+    <color name="success">#4CAF50</color>
+           ~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:29: Warning: The resource R.color.warning appears to be unused [UnusedResources]
+    <color name="warning">#FF9800</color>
+           ~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:30: Warning: The resource R.color.error_light appears to be unused [UnusedResources]
+    <color name="error_light">#C0012F</color>
+           ~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:31: Warning: The resource R.color.error_dark appears to be unused [UnusedResources]
+    <color name="error_dark">#FF5459</color>
+           ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:34: Warning: The resource R.color.glass_light appears to be unused [UnusedResources]
+    <color name="glass_light">#1AFFFFFF</color>
+           ~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:35: Warning: The resource R.color.glass_dark appears to be unused [UnusedResources]
+    <color name="glass_dark">#1A000000</color>
+           ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\colors.xml:36: Warning: The resource R.color.glass_border appears to be unused [UnusedResources]
+    <color name="glass_border">#33FFFFFF</color>
+           ~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:6: Warning: The resource R.string.loading appears to be unused [UnusedResources]
+    <string name="loading">Loading…</string>
+            ~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:7: Warning: The resource R.string.error appears to be unused [UnusedResources]
+    <string name="error">Error</string>
+            ~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:8: Warning: The resource R.string.retry appears to be unused [UnusedResources]
+    <string name="retry">Retry</string>
+            ~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:9: Warning: The resource R.string.cancel appears to be unused [UnusedResources]
+    <string name="cancel">Cancel</string>
+            ~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:10: Warning: The resource R.string.ok appears to be unused [UnusedResources]
+    <string name="ok">OK</string>
+            ~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:11: Warning: The resource R.string.save appears to be unused [UnusedResources]
+    <string name="save">Save</string>
+            ~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:12: Warning: The resource R.string.delete appears to be unused [UnusedResources]
+    <string name="delete">Delete</string>
+            ~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:15: Warning: The resource R.string.login appears to be unused [UnusedResources]
+    <string name="login">Login</string>
+            ~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:16: Warning: The resource R.string.register appears to be unused [UnusedResources]
+    <string name="register">Register</string>
+            ~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:17: Warning: The resource R.string.email appears to be unused [UnusedResources]
+    <string name="email">Email</string>
+            ~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:18: Warning: The resource R.string.password appears to be unused [UnusedResources]
+    <string name="password">Password</string>
+            ~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:19: Warning: The resource R.string.confirm_password appears to be unused [UnusedResources]
+    <string name="confirm_password">Confirm Password</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:20: Warning: The resource R.string.name appears to be unused [UnusedResources]
+    <string name="name">Name</string>
+            ~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:21: Warning: The resource R.string.age appears to be unused [UnusedResources]
+    <string name="age">Age</string>
+            ~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:22: Warning: The resource R.string.gender appears to be unused [UnusedResources]
+    <string name="gender">Gender</string>
+            ~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:23: Warning: The resource R.string.logout appears to be unused [UnusedResources]
+    <string name="logout">Logout</string>
+            ~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:26: Warning: The resource R.string.nav_chat appears to be unused [UnusedResources]
+    <string name="nav_chat">Chat</string>
+            ~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:27: Warning: The resource R.string.nav_health appears to be unused [UnusedResources]
+    <string name="nav_health">Health</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:28: Warning: The resource R.string.nav_documents appears to be unused [UnusedResources]
+    <string name="nav_documents">Documents</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:29: Warning: The resource R.string.nav_mood appears to be unused [UnusedResources]
+    <string name="nav_mood">Mood</string>
+            ~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:30: Warning: The resource R.string.nav_settings appears to be unused [UnusedResources]
+    <string name="nav_settings">Settings</string>
+            ~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:33: Warning: The resource R.string.chat_title appears to be unused [UnusedResources]
+    <string name="chat_title">FeyBerry</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:34: Warning: The resource R.string.chat_placeholder appears to be unused [UnusedResources]
+    <string name="chat_placeholder">Write a message…</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:35: Warning: The resource R.string.chat_send appears to be unused [UnusedResources]
+    <string name="chat_send">Send</string>
+            ~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:36: Warning: The resource R.string.chat_voice appears to be unused [UnusedResources]
+    <string name="chat_voice">Voice input</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:39: Warning: The resource R.string.health_dashboard appears to be unused [UnusedResources]
+    <string name="health_dashboard">Health Dashboard</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:40: Warning: The resource R.string.health_insights appears to be unused [UnusedResources]
+    <string name="health_insights">Insights</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:41: Warning: The resource R.string.health_metrics appears to be unused [UnusedResources]
+    <string name="health_metrics">Metrics</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:44: Warning: The resource R.string.mood_title appears to be unused [UnusedResources]
+    <string name="mood_title">How are you feeling?</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:45: Warning: The resource R.string.mood_level appears to be unused [UnusedResources]
+    <string name="mood_level">Mood Level</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:46: Warning: The resource R.string.stress_level appears to be unused [UnusedResources]
+    <string name="stress_level">Stress Level</string>
+            ~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:47: Warning: The resource R.string.journal_entry appears to be unused [UnusedResources]
+    <string name="journal_entry">Journal Entry</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:48: Warning: The resource R.string.journal_placeholder appears to be unused [UnusedResources]
+    <string name="journal_placeholder">Write how you\'re feeling…</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:49: Warning: The resource R.string.save_entry appears to be unused [UnusedResources]
+    <string name="save_entry">Save Entry</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:52: Warning: The resource R.string.documents_title appears to be unused [UnusedResources]
+    <string name="documents_title">My Documents</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:53: Warning: The resource R.string.upload_document appears to be unused [UnusedResources]
+    <string name="upload_document">Upload Document</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:54: Warning: The resource R.string.take_photo appears to be unused [UnusedResources]
+    <string name="take_photo">Take Photo</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:55: Warning: The resource R.string.processing appears to be unused [UnusedResources]
+    <string name="processing">Processing…</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:58: Warning: The resource R.string.permission_camera appears to be unused [UnusedResources]
+    <string name="permission_camera">Camera permission is needed to take photos of documents</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:59: Warning: The resource R.string.permission_microphone appears to be unused [UnusedResources]
+    <string name="permission_microphone">Microphone permission is needed for voice input</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\values\strings.xml:60: Warning: The resource R.string.permission_denied appears to be unused [UnusedResources]
+    <string name="permission_denied">Permission denied</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests =true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests =true.
+   ,
+
+   Available options:
+
+   **skip-libraries** (default is true):
+   Whether the unused resource check should skip reporting unused resources in libraries.
+
+   Many libraries will declare resources that are part of the library surface; other modules depending on the library will also reference the resources. To avoid reporting all these resources as unused (in the context of a library), the unused resource check normally skips reporting unused resources in libraries. Instead, run the unused resource check on the consuming app module (along with `checkDependencies=true`).
+
+   However, there are cases where you want to check that all the resources declared in a library are used; in that case, you can disable the skip option.
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UnusedResources">
+           <option name="skip-libraries" value="true" />
+       </issue>
+   </lint>
+   ```
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml:2: Warning: The application adaptive icon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\mipmap-anydpi-v26\ic_launcher_round.xml:2: Warning: The application adaptive roundIcon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+
+   Explanation for issues of type "MonochromeLauncherIcon":
+   If android:roundIcon and android:icon are both in your manifest, you must
+   either remove the reference to android:roundIcon if it is not needed; or,
+   supply the monochrome icon in the drawable defined by the android:roundIcon
+   and android:icon attribute.
+
+   For example, if android:roundIcon and android:icon are both in the
+   manifest, a launcher might choose to use android:roundIcon over
+   android:icon to display the adaptive app icon. Therefore, your themed
+   application iconwill not show if your monochrome attribute is not also
+   specified in android:roundIcon.
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\res\drawable\ic_launcher_foreground.png: Warning: Found bitmap drawable res/drawable/ic_launcher_foreground.png in densityless folder [IconLocation]
+
+   Explanation for issues of type "IconLocation":
+   The res/drawable folder is intended for density-independent graphics such
+   as shapes defined in XML. For bitmaps, move it to drawable-mdpi and
+   consider providing higher and lower resolution versions in drawable-ldpi,
+   drawable-hdpi and drawable-xhdpi. If the icon really is density independent
+   (for example a solid color) you can place it in drawable-nodpi.
+
+   https://developer.android.com/guide/practices/screens_support.html
+
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatBubbleV2.kt:211: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                                        .data(Uri.parse(imageUri))
+                                              ~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatBubbleV2.kt:900: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+        val request = android.app.DownloadManager.Request(android.net.Uri.parse(url))
+                                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatBubbleV2.kt:1002: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                        .data(Uri.parse(sourceImageUris.first()))
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatBubbleV2.kt:1106: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                                            .data(Uri.parse(sourceImageUris[index]))
+                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1642: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                        Uri.parse(imageUriString) 
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatScreen.kt:1852: Warning: Use the KTX extension function String.toColorInt instead? [UseKtx]
+        Color(AndroidColor.parseColor(normalized))
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:481: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                    _attachedImageUri.value = android.net.Uri.parse(imageUri)
+                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\chat\ChatViewModel.kt:711: Warning: Use the KTX extension function Bitmap.scale instead? [UseKtx]
+                android.graphics.Bitmap.createScaledBitmap(
+                ^
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\data\repositories\DocumentRepository.kt:224: Warning: Use the KTX extension function Bitmap.scale instead? [UseKtx]
+                val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\documents\DocumentsScreen.kt:347: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(prevUrl))
+                                                                                        ~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\documents\DocumentsScreen.kt:444: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(doc.getDownloadUrl()))
+                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\documents\DocumentsViewModel.kt:125: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+        prefs.edit().putString(documentId, name.trim()).apply()
+        ~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\medical\EmergencyScreen.kt:70: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                                data = Uri.parse("tel:$number")
+                                       ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\medical\EmergencyScreen.kt:70: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                                data = Uri.parse("tel:$number")
+                                       ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\settings\SettingsScreen.kt:196: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                    voicePrefs.edit().putBoolean("auto_send_voice", it).apply()
+                    ~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\utils\VoiceEventLogger.kt:19: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+        prefs.edit().putString(KEY, lines.joinToString("\n")).commit()
+        ~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\utils\VoiceEventLogger.kt:29: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+        prefs.edit().remove(KEY).apply()
+        ~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\wellness\WellnessScreen.kt:1031: Warning: Use the KTX extension function String.toColorInt instead? [UseKtx]
+        Color(android.graphics.Color.parseColor(habit.color))
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Pand-AI-helper-android\AIHealthCompanion\app\src\main\kotlin\com\health\companion\presentation\screens\wellness\WellnessScreen.kt:1720: Warning: Use the KTX extension function String.toColorInt instead? [UseKtx]
+                    val color = Color(android.graphics.Color.parseColor(colorHex))
+                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UseKtx":
+   The Android KTX libraries decorates the Android platform SDK as well as
+   various libraries with more convenient extension functions available from
+   Kotlin, allowing you to use default parameters, named parameters, and
+   more.
+
+   Available options:
+
+   **remove-defaults** (default is true):
+   Whether to skip arguments that match the defaults provided by the extension.
+
+   Extensions often provide default values for some of the parameters. For example:
+   ```kotlin
+   fun Path.readLines(charset: Charset = Charsets.UTF_8): List<String> { return Files.readAllLines(this, charset) }
+   ```
+   This lint check will by default automatically omit parameters that match the default, so if your code was calling
+
+   ```kotlin
+   Files.readAllLines(file, Charset.UTF_8)
+   ```
+   lint would replace this with
+   ```kotlin
+   file.readLines()
+   ```
+   rather than
+
+   ```kotlin
+   file.readLines(Charset.UTF_8
+   ```
+   You can turn this behavior off using this option.
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UseKtx">
+           <option name="remove-defaults" value="true" />
+       </issue>
+   </lint>
+   ```
+
+   **require-present** (default is true):
+   Whether to only offer extensions already available.
+
+   This option lets you only have lint suggest extension replacements if those extensions are already available on the class path (in other words, you're already depending on the library containing the extension method.)
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UseKtx">
+           <option name="require-present" value="true" />
+       </issue>
+   </lint>
+   ```
+
+2 errors, 172 warnings, 5 hints

@@ -1,0 +1,2994 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.13.2" type="incidents">
+
+    <incident
+        id="ApplySharedPref"
+        severity="warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background">
+        <fix-replace
+            description="Replace commit() with apply()"
+            oldPattern="(commit)\s*\("
+            replacement="apply"
+            priority="0"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+            line="19"
+            column="63"
+            startOffset="756"
+            endLine="19"
+            endColumn="71"
+            endOffset="764"/>
+    </incident>
+
+    <incident
+        id="DefaultLocale"
+        severity="warning"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/SessionAttachmentsSheet.kt"
+            line="369"
+            column="17"
+            startOffset="13857"
+            endLine="369"
+            endColumn="68"
+            endOffset="13908"/>
+    </incident>
+
+    <incident
+        id="DefaultLocale"
+        severity="warning"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+            line="756"
+            column="21"
+            startOffset="25812"
+            endLine="756"
+            endColumn="61"
+            endOffset="25852"/>
+    </incident>
+
+    <incident
+        id="OldTargetApi"
+        severity="warning"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details.">
+        <fix-replace
+            description="Update targetSdkVersion to 36"
+            oldString="34"
+            replacement="36"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="17"
+            column="9"
+            startOffset="405"
+            endLine="17"
+            endColumn="23"
+            endOffset="419"/>
+    </incident>
+
+    <incident
+        id="SuspiciousIndentation"
+        severity="error"
+        message="Suspicious indentation: This is indented but is not continuing the previous expression (`val rotation by infi`...)">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1964"
+            column="9"
+            startOffset="88190"
+            endLine="1964"
+            endColumn="13"
+            endOffset="88194"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1954"
+            column="5"
+            startOffset="87873"
+            endLine="1954"
+            endColumn="53"
+            endOffset="87921"
+            message="Previous statement here"/>
+    </incident>
+
+    <incident
+        id="RedundantLabel"
+        severity="warning"
+        message="Redundant label can be removed">
+        <fix-attribute
+            description="Delete label"
+            namespace="http://schemas.android.com/apk/res/android"
+            attribute="label"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*manifest*0}"
+            line="50"
+            column="13"
+            startOffset="2074"
+            endLine="50"
+            endColumn="45"
+            endOffset="2106"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of `compileSdkVersion` than 34 is available: 36">
+        <fix-replace
+            description="Set compileSdkVersion to 36"
+            oldString="34"
+            replacement="36"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="12"
+            column="5"
+            startOffset="293"
+            endLine="12"
+            endColumn="20"
+            endOffset="308"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.activity:activity-compose than 1.8.2 is available: 1.12.3">
+        <fix-replace
+            description="Change to 1.12.3"
+            family="Update versions"
+            oldString="1.8.2"
+            replacement="1.12.3"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="99"
+            column="20"
+            startOffset="3088"
+            endLine="99"
+            endColumn="62"
+            endOffset="3130"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-compose than 2.7.0 is available: 2.10.0">
+        <fix-replace
+            description="Change to 2.10.0"
+            family="Update versions"
+            oldString="2.7.0"
+            replacement="2.10.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="100"
+            column="20"
+            startOffset="3151"
+            endLine="100"
+            endColumn="72"
+            endOffset="3203"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.7.0 is available: 2.10.0">
+        <fix-replace
+            description="Change to 2.10.0"
+            family="Update versions"
+            oldString="2.7.0"
+            replacement="2.10.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="101"
+            column="20"
+            startOffset="3224"
+            endLine="101"
+            endColumn="74"
+            endOffset="3278"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.7.0 is available: 2.10.0">
+        <fix-replace
+            description="Change to 2.10.0"
+            family="Update versions"
+            oldString="2.7.0"
+            replacement="2.10.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="102"
+            column="20"
+            startOffset="3299"
+            endLine="102"
+            endColumn="68"
+            endOffset="3347"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.navigation:navigation-compose than 2.7.7 is available: 2.9.7">
+        <fix-replace
+            description="Change to 2.9.7"
+            family="Update versions"
+            oldString="2.7.7"
+            replacement="2.9.7"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="105"
+            column="20"
+            startOffset="3391"
+            endLine="105"
+            endColumn="66"
+            endOffset="3437"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.hilt:hilt-navigation-compose than 1.1.0 is available: 1.3.0">
+        <fix-replace
+            description="Change to 1.3.0"
+            family="Update versions"
+            oldString="1.1.0"
+            replacement="1.3.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="110"
+            column="20"
+            startOffset="3584"
+            endLine="110"
+            endColumn="65"
+            endOffset="3629"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-runtime than 2.6.1 is available: 2.8.4">
+        <fix-replace
+            description="Change to 2.8.4"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.8.4"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="113"
+            column="20"
+            startOffset="3676"
+            endLine="113"
+            endColumn="54"
+            endOffset="3710"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-ktx than 2.6.1 is available: 2.8.4">
+        <fix-replace
+            description="Change to 2.8.4"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.8.4"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="114"
+            column="20"
+            startOffset="3731"
+            endLine="114"
+            endColumn="50"
+            endOffset="3761"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-compiler than 2.6.1 is available: 2.8.4">
+        <fix-replace
+            description="Change to 2.8.4"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.8.4"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="115"
+            column="9"
+            startOffset="3771"
+            endLine="115"
+            endColumn="44"
+            endOffset="3806"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.datastore:datastore-preferences than 1.0.0 is available: 1.2.0">
+        <fix-replace
+            description="Change to 1.2.0"
+            family="Update versions"
+            oldString="1.0.0"
+            replacement="1.2.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="126"
+            column="20"
+            startOffset="4311"
+            endLine="126"
+            endColumn="68"
+            endOffset="4359"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.security:security-crypto than 1.1.0-alpha06 is available: 1.1.0">
+        <fix-replace
+            description="Change to 1.1.0"
+            family="Update versions"
+            oldString="1.1.0-alpha06"
+            replacement="1.1.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="127"
+            column="20"
+            startOffset="4380"
+            endLine="127"
+            endColumn="69"
+            endOffset="4429"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.camera:camera-core than 1.3.1 is available: 1.5.3">
+        <fix-replace
+            description="Change to 1.5.3"
+            family="Update versions"
+            oldString="1.3.1"
+            replacement="1.5.3"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="137"
+            column="20"
+            startOffset="4722"
+            endLine="137"
+            endColumn="55"
+            endOffset="4757"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.camera:camera-camera2 than 1.3.1 is available: 1.5.3">
+        <fix-replace
+            description="Change to 1.5.3"
+            family="Update versions"
+            oldString="1.3.1"
+            replacement="1.5.3"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="138"
+            column="20"
+            startOffset="4778"
+            endLine="138"
+            endColumn="58"
+            endOffset="4816"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.camera:camera-lifecycle than 1.3.1 is available: 1.5.3">
+        <fix-replace
+            description="Change to 1.5.3"
+            family="Update versions"
+            oldString="1.3.1"
+            replacement="1.5.3"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="139"
+            column="20"
+            startOffset="4837"
+            endLine="139"
+            endColumn="60"
+            endOffset="4877"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.camera:camera-view than 1.3.1 is available: 1.5.3">
+        <fix-replace
+            description="Change to 1.5.3"
+            family="Update versions"
+            oldString="1.3.1"
+            replacement="1.5.3"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="140"
+            column="20"
+            startOffset="4898"
+            endLine="140"
+            endColumn="55"
+            endOffset="4933"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.core:core-ktx than 1.12.0 is available: 1.17.0">
+        <fix-replace
+            description="Change to 1.17.0"
+            family="Update versions"
+            oldString="1.12.0"
+            replacement="1.17.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="149"
+            column="20"
+            startOffset="5149"
+            endLine="149"
+            endColumn="51"
+            endOffset="5180"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.appcompat:appcompat than 1.6.1 is available: 1.7.1">
+        <fix-replace
+            description="Change to 1.7.1"
+            family="Update versions"
+            oldString="1.6.1"
+            replacement="1.7.1"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="150"
+            column="20"
+            startOffset="5201"
+            endLine="150"
+            endColumn="56"
+            endOffset="5237"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.test.ext:junit than 1.1.5 is available: 1.3.0">
+        <fix-replace
+            description="Change to 1.3.0"
+            family="Update versions"
+            oldString="1.1.5"
+            replacement="1.3.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="157"
+            column="31"
+            startOffset="5465"
+            endLine="157"
+            endColumn="62"
+            endOffset="5496"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.test.espresso:espresso-core than 3.5.1 is available: 3.7.0">
+        <fix-replace
+            description="Change to 3.7.0"
+            family="Update versions"
+            oldString="3.5.1"
+            replacement="3.7.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="158"
+            column="31"
+            startOffset="5528"
+            endLine="158"
+            endColumn="75"
+            endOffset="5572"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.google.dagger:hilt-android than 2.50 is available: 2.59">
+        <fix-replace
+            description="Change to 2.59"
+            family="Update versions"
+            oldString="2.50"
+            replacement="2.59"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="108"
+            column="20"
+            startOffset="3478"
+            endLine="108"
+            endColumn="57"
+            endOffset="3515"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.google.dagger:hilt-compiler than 2.50 is available: 2.59">
+        <fix-replace
+            description="Change to 2.59"
+            family="Update versions"
+            oldString="2.50"
+            replacement="2.59"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="109"
+            column="9"
+            startOffset="3525"
+            endLine="109"
+            endColumn="47"
+            endOffset="3563"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.squareup.retrofit2:retrofit than 2.9.0 is available: 3.0.0">
+        <fix-replace
+            description="Change to 3.0.0"
+            family="Update versions"
+            oldString="2.9.0"
+            replacement="3.0.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="118"
+            column="20"
+            startOffset="3850"
+            endLine="118"
+            endColumn="59"
+            endOffset="3889"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.squareup.okhttp3:okhttp than 4.12.0 is available: 5.3.2">
+        <fix-replace
+            description="Change to 5.3.2"
+            family="Update versions"
+            oldString="4.12.0"
+            replacement="5.3.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="119"
+            column="20"
+            startOffset="3910"
+            endLine="119"
+            endColumn="56"
+            endOffset="3946"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.squareup.okhttp3:logging-interceptor than 4.12.0 is available: 5.3.2">
+        <fix-replace
+            description="Change to 5.3.2"
+            family="Update versions"
+            oldString="4.12.0"
+            replacement="5.3.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="120"
+            column="20"
+            startOffset="3967"
+            endLine="120"
+            endColumn="69"
+            endOffset="4016"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.squareup.okhttp3:okhttp-sse than 4.12.0 is available: 5.3.2">
+        <fix-replace
+            description="Change to 5.3.2"
+            family="Update versions"
+            oldString="4.12.0"
+            replacement="5.3.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="121"
+            column="20"
+            startOffset="4037"
+            endLine="121"
+            endColumn="60"
+            endOffset="4077"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-serialization-json than 1.6.2 is available: 1.10.0">
+        <fix-replace
+            description="Change to 1.10.0"
+            family="Update versions"
+            oldString="1.6.2"
+            replacement="1.10.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="122"
+            column="20"
+            startOffset="4098"
+            endLine="122"
+            endColumn="76"
+            endOffset="4154"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-android than 1.7.3 is available: 1.10.2">
+        <fix-replace
+            description="Change to 1.10.2"
+            family="Update versions"
+            oldString="1.7.3"
+            replacement="1.10.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="130"
+            column="20"
+            startOffset="4473"
+            endLine="130"
+            endColumn="76"
+            endOffset="4529"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-core than 1.7.3 is available: 1.10.2">
+        <fix-replace
+            description="Change to 1.10.2"
+            family="Update versions"
+            oldString="1.7.3"
+            replacement="1.10.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="131"
+            column="20"
+            startOffset="4550"
+            endLine="131"
+            endColumn="73"
+            endOffset="4603"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of io.coil-kt:coil-compose than 2.5.0 is available: 2.7.0">
+        <fix-replace
+            description="Change to 2.7.0"
+            family="Update versions"
+            oldString="2.5.0"
+            replacement="2.7.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="134"
+            column="20"
+            startOffset="4650"
+            endLine="134"
+            endColumn="51"
+            endOffset="4681"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.google.accompanist:accompanist-permissions than 0.34.0 is available: 0.37.3">
+        <fix-replace
+            description="Change to 0.37.3"
+            family="Update versions"
+            oldString="0.34.0"
+            replacement="0.37.3"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="143"
+            column="20"
+            startOffset="4978"
+            endLine="143"
+            endColumn="75"
+            endOffset="5033"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of io.mockk:mockk than 1.13.9 is available: 1.14.9">
+        <fix-replace
+            description="Change to 1.14.9"
+            family="Update versions"
+            oldString="1.13.9"
+            replacement="1.14.9"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="154"
+            column="24"
+            startOffset="5327"
+            endLine="154"
+            endColumn="47"
+            endOffset="5350"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-test than 1.7.3 is available: 1.10.2">
+        <fix-replace
+            description="Change to 1.10.2"
+            family="Update versions"
+            oldString="1.7.3"
+            replacement="1.10.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="155"
+            column="24"
+            startOffset="5375"
+            endLine="155"
+            endColumn="77"
+            endOffset="5428"/>
+    </incident>
+
+    <incident
+        id="ModifierParameter"
+        severity="warning"
+        message="Modifier parameter should be the first optional parameter">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+            line="785"
+            column="5"
+            startOffset="31148"
+            endLine="785"
+            endColumn="13"
+            endOffset="31156"/>
+    </incident>
+
+    <incident
+        id="DiscouragedApi"
+        severity="warning"
+        message="Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios.">
+        <show-url
+            description="Show https://developer.android.com/adaptive-apps"
+            url="https://developer.android.com/adaptive-apps"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*manifest*0}"
+            line="52"
+            column="13"
+            startOffset="2178"
+            endLine="52"
+            endColumn="49"
+            endOffset="2214"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;🖼️ ChatBubbleV2 showing imageUrl=$imageUrl&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;🖼️ ChatBubbleV2 showing imageUrl=$imageUrl&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;🖼️ ChatBubbleV2 showing imageUrl=$imageUrl&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;🖼️ ChatBubbleV2 showing imageUrl=$imageUrl&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;🖼️ ChatBubbleV2 showing imageUrl=$imageUrl&quot;)"
+                replacement="Timber.d(&quot;🖼️ ChatBubbleV2 showing imageUrl=$imageUrl&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+            line="229"
+            column="29"
+            startOffset="9492"
+            endLine="229"
+            endColumn="109"
+            endOffset="9572"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;sendMessageStream called with message: $message, images: ${images?.size ?: 0}&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;sendMessageStream called with message: $message, images: ${images?.size ?: 0}&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;sendMessageStream called with message: $message, images: ${images?.size ?: 0}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;sendMessageStream called with message: $message, images: ${images?.size ?: 0}&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;sendMessageStream called with message: $message, images: ${images?.size ?: 0}&quot;)"
+                replacement="Timber.d(&quot;sendMessageStream called with message: $message, images: ${images?.size ?: 0}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="228"
+            column="9"
+            startOffset="9406"
+            endLine="228"
+            endColumn="121"
+            endOffset="9518"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).e(&quot;No access token!&quot;)"
+                oldString="android.util.Log.e(&quot;SSE_DEBUG&quot;, &quot;No access token!&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).e(&quot;No access token!&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.e(&quot;No access token!&quot;)"
+                oldString="android.util.Log.e(&quot;SSE_DEBUG&quot;, &quot;No access token!&quot;)"
+                replacement="Timber.e(&quot;No access token!&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="232"
+            column="13"
+            startOffset="9619"
+            endLine="232"
+            endColumn="64"
+            endOffset="9670"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;Token OK, preparing request...&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;Token OK, preparing request...&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;Token OK, preparing request...&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Token OK, preparing request...&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;Token OK, preparing request...&quot;)"
+                replacement="Timber.d(&quot;Token OK, preparing request...&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="237"
+            column="9"
+            startOffset="9762"
+            endLine="237"
+            endColumn="74"
+            endOffset="9827"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;Image base64 length: ${img.length}, prefix: ${img.take(50)}&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;Image base64 length: ${img.length}, prefix: ${img.take(50)}&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;Image base64 length: ${img.length}, prefix: ${img.take(50)}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Image base64 length: ${img.length}, prefix: ${img.take(50)}&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;Image base64 length: ${img.length}, prefix: ${img.take(50)}&quot;)"
+                replacement="Timber.d(&quot;Image base64 length: ${img.length}, prefix: ${img.take(50)}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="247"
+            column="21"
+            startOffset="10228"
+            endLine="247"
+            endColumn="115"
+            endOffset="10322"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;✅ Added ${images.size} images to request body&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;✅ Added ${images.size} images to request body&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;✅ Added ${images.size} images to request body&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;✅ Added ${images.size} images to request body&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;✅ Added ${images.size} images to request body&quot;)"
+                replacement="Timber.d(&quot;✅ Added ${images.size} images to request body&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="250"
+            column="17"
+            startOffset="10400"
+            endLine="250"
+            endColumn="97"
+            endOffset="10480"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;Request body length: ${body.length} chars&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;Request body length: ${body.length} chars&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;Request body length: ${body.length} chars&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Request body length: ${body.length} chars&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;Request body length: ${body.length} chars&quot;)"
+                replacement="Timber.d(&quot;Request body length: ${body.length} chars&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="254"
+            column="9"
+            startOffset="10533"
+            endLine="254"
+            endColumn="85"
+            endOffset="10609"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;URL: $url&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;URL: $url&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;URL: $url&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;URL: $url&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;URL: $url&quot;)"
+                replacement="Timber.d(&quot;URL: $url&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="257"
+            column="9"
+            startOffset="10692"
+            endLine="257"
+            endColumn="53"
+            endOffset="10736"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;Creating EventSource...&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;Creating EventSource...&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;Creating EventSource...&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Creating EventSource...&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;Creating EventSource...&quot;)"
+                replacement="Timber.d(&quot;Creating EventSource...&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="270"
+            column="9"
+            startOffset="11174"
+            endLine="270"
+            endColumn="67"
+            endOffset="11232"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;SSE OPENED! Response: ${response.code}&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;SSE OPENED! Response: ${response.code}&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;SSE OPENED! Response: ${response.code}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;SSE OPENED! Response: ${response.code}&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;SSE OPENED! Response: ${response.code}&quot;)"
+                replacement="Timber.d(&quot;SSE OPENED! Response: ${response.code}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="275"
+            column="21"
+            startOffset="11460"
+            endLine="275"
+            endColumn="94"
+            endOffset="11533"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;SSE EVENT: type=$type, data=$data&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;SSE EVENT: type=$type, data=$data&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;SSE EVENT: type=$type, data=$data&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;SSE EVENT: type=$type, data=$data&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;SSE EVENT: type=$type, data=$data&quot;)"
+                replacement="Timber.d(&quot;SSE EVENT: type=$type, data=$data&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="284"
+            column="21"
+            startOffset="11794"
+            endLine="284"
+            endColumn="89"
+            endOffset="11862"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_IMAGE&quot;).d(&quot;IMAGE EVENT: url=$url, prompt=$prompt&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_IMAGE&quot;, &quot;IMAGE EVENT: url=$url, prompt=$prompt&quot;)"
+                replacement="Timber.tag(&quot;SSE_IMAGE&quot;).d(&quot;IMAGE EVENT: url=$url, prompt=$prompt&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;IMAGE EVENT: url=$url, prompt=$prompt&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_IMAGE&quot;, &quot;IMAGE EVENT: url=$url, prompt=$prompt&quot;)"
+                replacement="Timber.d(&quot;IMAGE EVENT: url=$url, prompt=$prompt&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="302"
+            column="33"
+            startOffset="12771"
+            endLine="302"
+            endColumn="105"
+            endOffset="12843"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;SSE CLOSED&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;SSE CLOSED&quot;)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).d(&quot;SSE CLOSED&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;SSE CLOSED&quot;)"
+                oldString="android.util.Log.d(&quot;SSE_DEBUG&quot;, &quot;SSE CLOSED&quot;)"
+                replacement="Timber.d(&quot;SSE CLOSED&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="370"
+            column="21"
+            startOffset="16965"
+            endLine="370"
+            endColumn="66"
+            endOffset="17010"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;SSE_DEBUG&quot;).e(t, &quot;SSE FAILURE! code=${response?.code}, error=${t?.message}&quot;)"
+                oldString="android.util.Log.e(&quot;SSE_DEBUG&quot;, &quot;SSE FAILURE! code=${response?.code}, error=${t?.message}&quot;, t)"
+                replacement="Timber.tag(&quot;SSE_DEBUG&quot;).e(t, &quot;SSE FAILURE! code=${response?.code}, error=${t?.message}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.e(t, &quot;SSE FAILURE! code=${response?.code}, error=${t?.message}&quot;)"
+                oldString="android.util.Log.e(&quot;SSE_DEBUG&quot;, &quot;SSE FAILURE! code=${response?.code}, error=${t?.message}&quot;, t)"
+                replacement="Timber.e(t, &quot;SSE FAILURE! code=${response?.code}, error=${t?.message}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/ChatRepository.kt"
+            line="375"
+            column="21"
+            startOffset="17242"
+            endLine="375"
+            endColumn="115"
+            endOffset="17336"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;UI_DEBUG&quot;).d(&quot;Messages recompose: size=${messages.size}, lastLen=${messages.lastOrNull()?.content?.length}&quot;)"
+                oldString="android.util.Log.d(&quot;UI_DEBUG&quot;, &quot;Messages recompose: size=${messages.size}, lastLen=${messages.lastOrNull()?.content?.length}&quot;)"
+                replacement="Timber.tag(&quot;UI_DEBUG&quot;).d(&quot;Messages recompose: size=${messages.size}, lastLen=${messages.lastOrNull()?.content?.length}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Messages recompose: size=${messages.size}, lastLen=${messages.lastOrNull()?.content?.length}&quot;)"
+                oldString="android.util.Log.d(&quot;UI_DEBUG&quot;, &quot;Messages recompose: size=${messages.size}, lastLen=${messages.lastOrNull()?.content?.length}&quot;)"
+                replacement="Timber.d(&quot;Messages recompose: size=${messages.size}, lastLen=${messages.lastOrNull()?.content?.length}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="97"
+            column="9"
+            startOffset="4150"
+            endLine="97"
+            endColumn="135"
+            endOffset="4276"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_LOAD&quot;).e(&quot;Failed to load: $imageUriString&quot;)"
+                oldString="android.util.Log.e(&quot;IMAGE_LOAD&quot;, &quot;Failed to load: $imageUriString&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_LOAD&quot;).e(&quot;Failed to load: $imageUriString&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.e(&quot;Failed to load: $imageUriString&quot;)"
+                oldString="android.util.Log.e(&quot;IMAGE_LOAD&quot;, &quot;Failed to load: $imageUriString&quot;)"
+                replacement="Timber.e(&quot;Failed to load: $imageUriString&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1666"
+            column="37"
+            startOffset="77242"
+            endLine="1666"
+            endColumn="104"
+            endOffset="77309"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🎨 COMPOSE @${System.currentTimeMillis()} fullText.len=${fullText.length}, animate=$animationEnabled, created@$composeTime&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🎨 COMPOSE @${System.currentTimeMillis()} fullText.len=${fullText.length}, animate=$animationEnabled, created@$composeTime&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🎨 COMPOSE @${System.currentTimeMillis()} fullText.len=${fullText.length}, animate=$animationEnabled, created@$composeTime&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;🎨 COMPOSE @${System.currentTimeMillis()} fullText.len=${fullText.length}, animate=$animationEnabled, created@$composeTime&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🎨 COMPOSE @${System.currentTimeMillis()} fullText.len=${fullText.length}, animate=$animationEnabled, created@$composeTime&quot;)"
+                replacement="Timber.d(&quot;🎨 COMPOSE @${System.currentTimeMillis()} fullText.len=${fullText.length}, animate=$animationEnabled, created@$composeTime&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1780"
+            column="5"
+            startOffset="81889"
+            endLine="1780"
+            endColumn="164"
+            endOffset="82048"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🚀 ANIM START @${System.currentTimeMillis()}&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🚀 ANIM START @${System.currentTimeMillis()}&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🚀 ANIM START @${System.currentTimeMillis()}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;🚀 ANIM START @${System.currentTimeMillis()}&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🚀 ANIM START @${System.currentTimeMillis()}&quot;)"
+                replacement="Timber.d(&quot;🚀 ANIM START @${System.currentTimeMillis()}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1787"
+            column="9"
+            startOffset="82252"
+            endLine="1787"
+            endColumn="90"
+            endOffset="82333"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;📝 RENDER visible=$visibleChars, fullLen=${fullText.length}, showing=${displayText.length}&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;📝 RENDER visible=$visibleChars, fullLen=${fullText.length}, showing=${displayText.length}&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;📝 RENDER visible=$visibleChars, fullLen=${fullText.length}, showing=${displayText.length}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;📝 RENDER visible=$visibleChars, fullLen=${fullText.length}, showing=${displayText.length}&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;📝 RENDER visible=$visibleChars, fullLen=${fullText.length}, showing=${displayText.length}&quot;)"
+                replacement="Timber.d(&quot;📝 RENDER visible=$visibleChars, fullLen=${fullText.length}, showing=${displayText.length}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1802"
+            column="9"
+            startOffset="82707"
+            endLine="1802"
+            endColumn="136"
+            endOffset="82834"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;CHAT_DEBUG&quot;).d(&quot;sendMessage called: $text&quot;)"
+                oldString="android.util.Log.d(&quot;CHAT_DEBUG&quot;, &quot;sendMessage called: $text&quot;)"
+                replacement="Timber.tag(&quot;CHAT_DEBUG&quot;).d(&quot;sendMessage called: $text&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;sendMessage called: $text&quot;)"
+                oldString="android.util.Log.d(&quot;CHAT_DEBUG&quot;, &quot;sendMessage called: $text&quot;)"
+                replacement="Timber.d(&quot;sendMessage called: $text&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="235"
+            column="9"
+            startOffset="9828"
+            endLine="235"
+            endColumn="70"
+            endOffset="9889"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;CHAT_DEBUG&quot;).d(&quot;Starting stream...&quot;)"
+                oldString="android.util.Log.d(&quot;CHAT_DEBUG&quot;, &quot;Starting stream...&quot;)"
+                replacement="Timber.tag(&quot;CHAT_DEBUG&quot;).d(&quot;Starting stream...&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Starting stream...&quot;)"
+                oldString="android.util.Log.d(&quot;CHAT_DEBUG&quot;, &quot;Starting stream...&quot;)"
+                replacement="Timber.d(&quot;Starting stream...&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="240"
+            column="17"
+            startOffset="9992"
+            endLine="240"
+            endColumn="71"
+            endOffset="10046"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;========== SEND MESSAGE ==========&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;========== SEND MESSAGE ==========&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;========== SEND MESSAGE ==========&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;========== SEND MESSAGE ==========&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;========== SEND MESSAGE ==========&quot;)"
+                replacement="Timber.d(&quot;========== SEND MESSAGE ==========&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="248"
+            column="17"
+            startOffset="10380"
+            endLine="248"
+            endColumn="88"
+            endOffset="10451"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;1. Current attached URI: $currentAttachedUri&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;1. Current attached URI: $currentAttachedUri&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;1. Current attached URI: $currentAttachedUri&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;1. Current attached URI: $currentAttachedUri&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;1. Current attached URI: $currentAttachedUri&quot;)"
+                replacement="Timber.d(&quot;1. Current attached URI: $currentAttachedUri&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="249"
+            column="17"
+            startOffset="10468"
+            endLine="249"
+            endColumn="98"
+            endOffset="10549"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;2. Has attached image: $hasAttachedImage&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;2. Has attached image: $hasAttachedImage&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;2. Has attached image: $hasAttachedImage&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;2. Has attached image: $hasAttachedImage&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;2. Has attached image: $hasAttachedImage&quot;)"
+                replacement="Timber.d(&quot;2. Has attached image: $hasAttachedImage&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="254"
+            column="17"
+            startOffset="10810"
+            endLine="254"
+            endColumn="94"
+            endOffset="10887"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;3. Base64 images count: ${attachedImages?.size ?: 0}&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;3. Base64 images count: ${attachedImages?.size ?: 0}&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;3. Base64 images count: ${attachedImages?.size ?: 0}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;3. Base64 images count: ${attachedImages?.size ?: 0}&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;3. Base64 images count: ${attachedImages?.size ?: 0}&quot;)"
+                replacement="Timber.d(&quot;3. Base64 images count: ${attachedImages?.size ?: 0}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="255"
+            column="17"
+            startOffset="10904"
+            endLine="255"
+            endColumn="106"
+            endOffset="10993"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;4. Base64 first 100 chars: ${attachedImages.firstOrNull()?.take(100)}&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;4. Base64 first 100 chars: ${attachedImages.firstOrNull()?.take(100)}&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;4. Base64 first 100 chars: ${attachedImages.firstOrNull()?.take(100)}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;4. Base64 first 100 chars: ${attachedImages.firstOrNull()?.take(100)}&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;4. Base64 first 100 chars: ${attachedImages.firstOrNull()?.take(100)}&quot;)"
+                replacement="Timber.d(&quot;4. Base64 first 100 chars: ${attachedImages.firstOrNull()?.take(100)}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="257"
+            column="21"
+            startOffset="11060"
+            endLine="257"
+            endColumn="127"
+            endOffset="11166"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;5. Saving URI string for display: ${it.first()}&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;5. Saving URI string for display: ${it.first()}&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;5. Saving URI string for display: ${it.first()}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;5. Saving URI string for display: ${it.first()}&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;5. Saving URI string for display: ${it.first()}&quot;)"
+                replacement="Timber.d(&quot;5. Saving URI string for display: ${it.first()}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="264"
+            column="25"
+            startOffset="11507"
+            endLine="264"
+            endColumn="109"
+            endOffset="11591"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;6. attachedImageUris: $attachedImageUris&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;6. attachedImageUris: $attachedImageUris&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_DEBUG&quot;).d(&quot;6. attachedImageUris: $attachedImageUris&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;6. attachedImageUris: $attachedImageUris&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_DEBUG&quot;, &quot;6. attachedImageUris: $attachedImageUris&quot;)"
+                replacement="Timber.d(&quot;6. attachedImageUris: $attachedImageUris&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="267"
+            column="17"
+            startOffset="11658"
+            endLine="267"
+            endColumn="94"
+            endOffset="11735"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;CHAT_DEBUG&quot;).d(&quot;Added user message with images: ${userMessage.images}&quot;)"
+                oldString="android.util.Log.d(&quot;CHAT_DEBUG&quot;, &quot;Added user message with images: ${userMessage.images}&quot;)"
+                replacement="Timber.tag(&quot;CHAT_DEBUG&quot;).d(&quot;Added user message with images: ${userMessage.images}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Added user message with images: ${userMessage.images}&quot;)"
+                oldString="android.util.Log.d(&quot;CHAT_DEBUG&quot;, &quot;Added user message with images: ${userMessage.images}&quot;)"
+                replacement="Timber.d(&quot;Added user message with images: ${userMessage.images}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="282"
+            column="17"
+            startOffset="12426"
+            endLine="282"
+            endColumn="106"
+            endOffset="12515"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;📊 STATUS: &apos;$status&apos;&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;📊 STATUS: &apos;$status&apos;&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;📊 STATUS: &apos;$status&apos;&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;📊 STATUS: &apos;$status&apos;&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;📊 STATUS: &apos;$status&apos;&quot;)"
+                replacement="Timber.d(&quot;📊 STATUS: &apos;$status&apos;&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="301"
+            column="25"
+            startOffset="13374"
+            endLine="301"
+            endColumn="82"
+            endOffset="13431"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;⚡ TOKEN @$tokenTime len=${currentContent.length} chunk=&apos;${token.take(20)}&apos;&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;⚡ TOKEN @$tokenTime len=${currentContent.length} chunk=&apos;${token.take(20)}&apos;&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;⚡ TOKEN @$tokenTime len=${currentContent.length} chunk=&apos;${token.take(20)}&apos;&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;⚡ TOKEN @$tokenTime len=${currentContent.length} chunk=&apos;${token.take(20)}&apos;&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;⚡ TOKEN @$tokenTime len=${currentContent.length} chunk=&apos;${token.take(20)}&apos;&quot;)"
+                replacement="Timber.d(&quot;⚡ TOKEN @$tokenTime len=${currentContent.length} chunk=&apos;${token.take(20)}&apos;&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="310"
+            column="25"
+            startOffset="13870"
+            endLine="310"
+            endColumn="136"
+            endOffset="13981"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;📦 FIRST MSG ADD @${System.currentTimeMillis()} len=${currentContent.length}&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;📦 FIRST MSG ADD @${System.currentTimeMillis()} len=${currentContent.length}&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;📦 FIRST MSG ADD @${System.currentTimeMillis()} len=${currentContent.length}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;📦 FIRST MSG ADD @${System.currentTimeMillis()} len=${currentContent.length}&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;📦 FIRST MSG ADD @${System.currentTimeMillis()} len=${currentContent.length}&quot;)"
+                replacement="Timber.d(&quot;📦 FIRST MSG ADD @${System.currentTimeMillis()} len=${currentContent.length}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="316"
+            column="33"
+            startOffset="14273"
+            endLine="316"
+            endColumn="146"
+            endOffset="14386"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🖼️ IMAGE RECEIVED: url=&apos;$url&apos;, prompt=&apos;$prompt&apos;&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🖼️ IMAGE RECEIVED: url=&apos;$url&apos;, prompt=&apos;$prompt&apos;&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🖼️ IMAGE RECEIVED: url=&apos;$url&apos;, prompt=&apos;$prompt&apos;&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;🖼️ IMAGE RECEIVED: url=&apos;$url&apos;, prompt=&apos;$prompt&apos;&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🖼️ IMAGE RECEIVED: url=&apos;$url&apos;, prompt=&apos;$prompt&apos;&quot;)"
+                replacement="Timber.d(&quot;🖼️ IMAGE RECEIVED: url=&apos;$url&apos;, prompt=&apos;$prompt&apos;&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="339"
+            column="25"
+            startOffset="15717"
+            endLine="339"
+            endColumn="110"
+            endOffset="15802"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🖼️ FULL URL: $fullUrl&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🖼️ FULL URL: $fullUrl&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🖼️ FULL URL: $fullUrl&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;🖼️ FULL URL: $fullUrl&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🖼️ FULL URL: $fullUrl&quot;)"
+                replacement="Timber.d(&quot;🖼️ FULL URL: $fullUrl&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="348"
+            column="25"
+            startOffset="16261"
+            endLine="348"
+            endColumn="84"
+            endOffset="16320"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🖼️ Created message with imageUrl=$fullUrl&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🖼️ Created message with imageUrl=$fullUrl&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🖼️ Created message with imageUrl=$fullUrl&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;🖼️ Created message with imageUrl=$fullUrl&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🖼️ Created message with imageUrl=$fullUrl&quot;)"
+                replacement="Timber.d(&quot;🖼️ Created message with imageUrl=$fullUrl&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="368"
+            column="33"
+            startOffset="17422"
+            endLine="368"
+            endColumn="112"
+            endOffset="17501"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🖼️ Updated message with imageUrl=$fullUrl&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🖼️ Updated message with imageUrl=$fullUrl&quot;)"
+                replacement="Timber.tag(&quot;STREAM_DIAG&quot;).d(&quot;🖼️ Updated message with imageUrl=$fullUrl&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;🖼️ Updated message with imageUrl=$fullUrl&quot;)"
+                oldString="android.util.Log.d(&quot;STREAM_DIAG&quot;, &quot;🖼️ Updated message with imageUrl=$fullUrl&quot;)"
+                replacement="Timber.d(&quot;🖼️ Updated message with imageUrl=$fullUrl&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="374"
+            column="33"
+            startOffset="17841"
+            endLine="374"
+            endColumn="112"
+            endOffset="17920"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;RETRY&quot;).e(&quot;Failed to restore attached image: $e&quot;)"
+                oldString="android.util.Log.e(&quot;RETRY&quot;, &quot;Failed to restore attached image: $e&quot;)"
+                replacement="Timber.tag(&quot;RETRY&quot;).e(&quot;Failed to restore attached image: $e&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.e(&quot;Failed to restore attached image: $e&quot;)"
+                oldString="android.util.Log.e(&quot;RETRY&quot;, &quot;Failed to restore attached image: $e&quot;)"
+                replacement="Timber.e(&quot;Failed to restore attached image: $e&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="483"
+            column="21"
+            startOffset="23936"
+            endLine="483"
+            endColumn="88"
+            endOffset="24003"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_ATTACH&quot;).d(&quot;Attaching image: $uri&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_ATTACH&quot;, &quot;Attaching image: $uri&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_ATTACH&quot;).d(&quot;Attaching image: $uri&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Attaching image: $uri&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_ATTACH&quot;, &quot;Attaching image: $uri&quot;)"
+                replacement="Timber.d(&quot;Attaching image: $uri&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="674"
+            column="9"
+            startOffset="31822"
+            endLine="674"
+            endColumn="68"
+            endOffset="31881"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_ATTACH&quot;).d(&quot;Removing attached image&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_ATTACH&quot;, &quot;Removing attached image&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_ATTACH&quot;).d(&quot;Removing attached image&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Removing attached image&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_ATTACH&quot;, &quot;Removing attached image&quot;)"
+                replacement="Timber.d(&quot;Removing attached image&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="682"
+            column="9"
+            startOffset="32016"
+            endLine="682"
+            endColumn="70"
+            endOffset="32077"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_ATTACH&quot;).e(&quot;Failed to decode bitmap from URI&quot;)"
+                oldString="android.util.Log.e(&quot;IMAGE_ATTACH&quot;, &quot;Failed to decode bitmap from URI&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_ATTACH&quot;).e(&quot;Failed to decode bitmap from URI&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.e(&quot;Failed to decode bitmap from URI&quot;)"
+                oldString="android.util.Log.e(&quot;IMAGE_ATTACH&quot;, &quot;Failed to decode bitmap from URI&quot;)"
+                replacement="Timber.e(&quot;Failed to decode bitmap from URI&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="698"
+            column="17"
+            startOffset="32582"
+            endLine="698"
+            endColumn="87"
+            endOffset="32652"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_ATTACH&quot;).d(&quot;Converted to base64: ${paddedBase64.length} chars, original size: ${originalBitmap.width}x${originalBitmap.height}, scaled: ${scaledBitmap.width}x${scaledBitmap.height}&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_ATTACH&quot;, &quot;Converted to base64: ${paddedBase64.length} chars, original size: ${originalBitmap.width}x${originalBitmap.height}, scaled: ${scaledBitmap.width}x${scaledBitmap.height}&quot;)"
+                replacement="Timber.tag(&quot;IMAGE_ATTACH&quot;).d(&quot;Converted to base64: ${paddedBase64.length} chars, original size: ${originalBitmap.width}x${originalBitmap.height}, scaled: ${scaledBitmap.width}x${scaledBitmap.height}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.d(&quot;Converted to base64: ${paddedBase64.length} chars, original size: ${originalBitmap.width}x${originalBitmap.height}, scaled: ${scaledBitmap.width}x${scaledBitmap.height}&quot;)"
+                oldString="android.util.Log.d(&quot;IMAGE_ATTACH&quot;, &quot;Converted to base64: ${paddedBase64.length} chars, original size: ${originalBitmap.width}x${originalBitmap.height}, scaled: ${scaledBitmap.width}x${scaledBitmap.height}&quot;)"
+                replacement="Timber.d(&quot;Converted to base64: ${paddedBase64.length} chars, original size: ${originalBitmap.width}x${originalBitmap.height}, scaled: ${scaledBitmap.width}x${scaledBitmap.height}&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="735"
+            column="13"
+            startOffset="34046"
+            endLine="735"
+            endColumn="219"
+            endOffset="34252"/>
+    </incident>
+
+    <incident
+        id="LogNotTimber"
+        severity="warning"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;">
+        <fix-alternatives>
+            <fix-replace
+                description="Replace with Timber.tag(&quot;IMAGE_ATTACH&quot;).e(e, &quot;Failed to convert Uri to base64&quot;)"
+                oldString="android.util.Log.e(&quot;IMAGE_ATTACH&quot;, &quot;Failed to convert Uri to base64&quot;, e)"
+                replacement="Timber.tag(&quot;IMAGE_ATTACH&quot;).e(e, &quot;Failed to convert Uri to base64&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+            <fix-replace
+                description="Replace with Timber.e(e, &quot;Failed to convert Uri to base64&quot;)"
+                oldString="android.util.Log.e(&quot;IMAGE_ATTACH&quot;, &quot;Failed to convert Uri to base64&quot;, e)"
+                replacement="Timber.e(e, &quot;Failed to convert Uri to base64&quot;)"
+                shortenNames="true"
+                reformat="value"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="745"
+            column="13"
+            startOffset="34549"
+            endLine="745"
+            endColumn="85"
+            endOffset="34621"/>
+    </incident>
+
+    <incident
+        id="InsecureBaseConfiguration"
+        severity="warning"
+        message="Insecure Base Configuration">
+        <fix-replace
+            description="Replace with false"
+            replacement="false"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/xml/network_security_config.xml"
+                startOffset="384"
+                endOffset="388"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/xml/network_security_config.xml"
+            line="9"
+            column="45"
+            startOffset="384"
+            endLine="9"
+            endColumn="49"
+            endOffset="388"/>
+    </incident>
+
+    <incident
+        id="ObsoleteSdkInt"
+        severity="warning"
+        message="Unnecessary; `SDK_INT` is always >= 30">
+        <fix-data conditional="true"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1895"
+            column="17"
+            startOffset="85499"
+            endLine="1895"
+            endColumn="63"
+            endOffset="85545"/>
+    </incident>
+
+    <incident
+        id="ObsoleteSdkInt"
+        severity="warning"
+        message="Unnecessary; `SDK_INT` is always >= 30">
+        <fix-data conditional="true"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/services/HealthCompanionMessagingService.kt"
+            line="35"
+            column="13"
+            startOffset="1011"
+            endLine="35"
+            endColumn="59"
+            endOffset="1057"/>
+    </incident>
+
+    <incident
+        id="ObsoleteSdkInt"
+        severity="warning"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 30. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <fix-data file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-anydpi-v26" folderName="mipmap-anydpi" requiresApi="30"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-anydpi-v26"/>
+    </incident>
+
+    <incident
+        id="AutoboxingStateCreation"
+        severity="informational"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`">
+        <fix-replace
+            description="Replace with mutableIntStateOf"
+            replacement="androidx.compose.runtime.mutableIntStateOf"
+            shortenNames="true"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+                startOffset="19974"
+                endOffset="19988"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+            line="479"
+            column="36"
+            startOffset="19974"
+            endLine="479"
+            endColumn="50"
+            endOffset="19988"/>
+    </incident>
+
+    <incident
+        id="AutoboxingStateCreation"
+        severity="informational"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`">
+        <fix-replace
+            description="Replace with mutableIntStateOf"
+            replacement="androidx.compose.runtime.mutableIntStateOf"
+            shortenNames="true"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+                startOffset="82144"
+                endOffset="82158"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1783"
+            column="36"
+            startOffset="82144"
+            endLine="1783"
+            endColumn="50"
+            endOffset="82158"/>
+    </incident>
+
+    <incident
+        id="AutoboxingStateCreation"
+        severity="informational"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`">
+        <fix-replace
+            description="Replace with mutableIntStateOf"
+            replacement="androidx.compose.runtime.mutableIntStateOf"
+            shortenNames="true"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsScreen.kt"
+                startOffset="25949"
+                endOffset="25963"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsScreen.kt"
+            line="623"
+            column="34"
+            startOffset="25949"
+            endLine="623"
+            endColumn="48"
+            endOffset="25963"/>
+    </incident>
+
+    <incident
+        id="AutoboxingStateCreation"
+        severity="informational"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`">
+        <fix-replace
+            description="Replace with mutableIntStateOf"
+            replacement="androidx.compose.runtime.mutableIntStateOf"
+            shortenNames="true"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+                startOffset="48994"
+                endOffset="49008"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+            line="1469"
+            column="36"
+            startOffset="48994"
+            endLine="1469"
+            endColumn="50"
+            endOffset="49008"/>
+    </incident>
+
+    <incident
+        id="AutoboxingStateCreation"
+        severity="informational"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`">
+        <fix-replace
+            description="Replace with mutableIntStateOf"
+            replacement="androidx.compose.runtime.mutableIntStateOf"
+            shortenNames="true"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+                startOffset="55077"
+                endOffset="55091"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+            line="1627"
+            column="42"
+            startOffset="55077"
+            endLine="1627"
+            endColumn="56"
+            endOffset="55091"/>
+    </incident>
+
+    <incident
+        id="MonochromeLauncherIcon"
+        severity="warning"
+        message="The application adaptive icon is missing a monochrome tag">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-anydpi-v26/ic_launcher.xml"
+            line="2"
+            column="1"
+            startOffset="40"
+            endLine="5"
+            endColumn="17"
+            endOffset="271"/>
+    </incident>
+
+    <incident
+        id="MonochromeLauncherIcon"
+        severity="warning"
+        message="The application adaptive roundIcon is missing a monochrome tag">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-anydpi-v26/ic_launcher_round.xml"
+            line="2"
+            column="1"
+            startOffset="40"
+            endLine="5"
+            endColumn="17"
+            endOffset="271"/>
+    </incident>
+
+    <incident
+        id="IconLocation"
+        severity="warning"
+        message="Found bitmap drawable `res/drawable/ic_launcher_foreground.png` in densityless folder">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/drawable/ic_launcher_foreground.png"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(imageUri)"
+            replacement="imageUri.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+                startOffset="8566"
+                endOffset="8585"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+            line="211"
+            column="47"
+            startOffset="8566"
+            endLine="211"
+            endColumn="66"
+            endOffset="8585"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="android.net.Uri.parse(url)"
+            replacement="url.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+                startOffset="35414"
+                endOffset="35440"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+            line="900"
+            column="59"
+            startOffset="35414"
+            endLine="900"
+            endColumn="85"
+            endOffset="35440"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(sourceImageUris.first())"
+            replacement="sourceImageUris.first().toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+                startOffset="39174"
+                endOffset="39208"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+            line="1002"
+            column="31"
+            startOffset="39174"
+            endLine="1002"
+            endColumn="65"
+            endOffset="39208"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(sourceImageUris[index])"
+            replacement="sourceImageUris[index].toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+                startOffset="43985"
+                endOffset="44018"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatBubbleV2.kt"
+            line="1106"
+            column="51"
+            startOffset="43985"
+            endLine="1106"
+            endColumn="84"
+            endOffset="44018"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(imageUriString)"
+            replacement="imageUriString.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+                startOffset="75997"
+                endOffset="76022"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1642"
+            column="25"
+            startOffset="75997"
+            endLine="1642"
+            endColumn="50"
+            endOffset="76022"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toColorInt` instead?">
+        <fix-replace
+            description="Replace with the toColorInt extension function"
+            family="Replace with the toColorInt extension function"
+            robot="true"
+            independent="true"
+            oldString="AndroidColor.parseColor(normalized)"
+            replacement="normalized.toColorInt()"
+            reformat="value"
+            imports="androidx.core.graphics.toColorInt"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+                startOffset="84214"
+                endOffset="84249"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatScreen.kt"
+            line="1852"
+            column="15"
+            startOffset="84214"
+            endLine="1852"
+            endColumn="50"
+            endOffset="84249"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="android.net.Uri.parse(imageUri)"
+            replacement="imageUri.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+                startOffset="23843"
+                endOffset="23874"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="481"
+            column="47"
+            startOffset="23843"
+            endLine="481"
+            endColumn="78"
+            endOffset="23874"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `Bitmap.scale` instead?">
+        <fix-replace
+            description="Replace with the scale extension function"
+            family="Replace with the scale extension function"
+            robot="true"
+            independent="true"
+            oldString="android.graphics.Bitmap.createScaledBitmap(&#xA;                    originalBitmap,&#xA;                    (originalBitmap.width * scale).toInt(),&#xA;                    (originalBitmap.height * scale).toInt(),&#xA;                    true&#xA;                )"
+            replacement="originalBitmap.scale((originalBitmap.width * scale).toInt(), (originalBitmap.height * scale).toInt())"
+            reformat="value"
+            imports="androidx.core.graphics.scale"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+                startOffset="33074"
+                endOffset="33317"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/chat/ChatViewModel.kt"
+            line="711"
+            column="17"
+            startOffset="33074"
+            endLine="716"
+            endColumn="18"
+            endOffset="33317"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `Bitmap.scale` instead?">
+        <fix-replace
+            description="Replace with the scale extension function"
+            family="Replace with the scale extension function"
+            robot="true"
+            independent="true"
+            oldString="android.graphics.Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)"
+            replacement="bitmap.scale(newWidth, newHeight)"
+            reformat="value"
+            imports="androidx.core.graphics.scale"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/DocumentRepository.kt"
+                startOffset="9678"
+                endOffset="9755"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/data/repositories/DocumentRepository.kt"
+            line="224"
+            column="36"
+            startOffset="9678"
+            endLine="224"
+            endColumn="113"
+            endOffset="9755"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(prevUrl)"
+            replacement="prevUrl.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsScreen.kt"
+                startOffset="16092"
+                endOffset="16110"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsScreen.kt"
+            line="347"
+            column="89"
+            startOffset="16092"
+            endLine="347"
+            endColumn="107"
+            endOffset="16110"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(doc.getDownloadUrl())"
+            replacement="doc.getDownloadUrl().toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsScreen.kt"
+                startOffset="20085"
+                endOffset="20116"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsScreen.kt"
+            line="444"
+            column="57"
+            startOffset="20085"
+            endLine="444"
+            endColumn="88"
+            endOffset="20116"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?">
+        <fix-composite
+            description="Replace with the edit extension function"
+            family="Replace with the edit extension function"
+            robot="true"
+            independent="true">
+            <fix-replace
+                description="Replace with edit"
+                robot="true"
+                independent="true"
+                oldString="edit("
+                replacement="edit"
+                reformat="value"
+                imports="androidx.core.content.edit"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsViewModel.kt"
+                    startOffset="4821"
+                    endOffset="4826"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with  {"
+                robot="true"
+                independent="true"
+                oldString=")"
+                replacement=" {"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsViewModel.kt"
+                    startOffset="4826"
+                    endOffset="4827"/>
+            </fix-replace>
+            <fix-replace
+                description="Delete &quot;.&quot;"
+                robot="true"
+                independent="true"
+                oldString="."
+                replacement=""
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsViewModel.kt"
+                    startOffset="4827"
+                    endOffset="4828"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with }"
+                robot="true"
+                independent="true"
+                oldString=".apply()"
+                replacement="}"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsViewModel.kt"
+                    startOffset="4862"
+                    endOffset="4870"/>
+            </fix-replace>
+        </fix-composite>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/documents/DocumentsViewModel.kt"
+            line="125"
+            column="9"
+            startOffset="4815"
+            endLine="125"
+            endColumn="21"
+            endOffset="4827"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(&quot;tel:$number&quot;)"
+            replacement="&quot;tel:$number&quot;.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/medical/EmergencyScreen.kt"
+                startOffset="2787"
+                endOffset="2811"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/medical/EmergencyScreen.kt"
+            line="70"
+            column="40"
+            startOffset="2787"
+            endLine="70"
+            endColumn="64"
+            endOffset="2811"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(&quot;tel:$number&quot;)"
+            replacement="&quot;tel:$number&quot;.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/medical/EmergencyScreen.kt"
+                startOffset="2787"
+                endOffset="2811"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/medical/EmergencyScreen.kt"
+            line="70"
+            column="40"
+            startOffset="2787"
+            endLine="70"
+            endColumn="64"
+            endOffset="2811"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?">
+        <fix-composite
+            description="Replace with the edit extension function"
+            family="Replace with the edit extension function"
+            robot="true"
+            independent="true">
+            <fix-replace
+                description="Replace with edit"
+                robot="true"
+                independent="true"
+                oldString="edit("
+                replacement="edit"
+                reformat="value"
+                imports="androidx.core.content.edit"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/settings/SettingsScreen.kt"
+                    startOffset="7575"
+                    endOffset="7580"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with  {"
+                robot="true"
+                independent="true"
+                oldString=")"
+                replacement=" {"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/settings/SettingsScreen.kt"
+                    startOffset="7580"
+                    endOffset="7581"/>
+            </fix-replace>
+            <fix-replace
+                description="Delete &quot;.&quot;"
+                robot="true"
+                independent="true"
+                oldString="."
+                replacement=""
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/settings/SettingsScreen.kt"
+                    startOffset="7581"
+                    endOffset="7582"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with }"
+                robot="true"
+                independent="true"
+                oldString=".apply()"
+                replacement="}"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/settings/SettingsScreen.kt"
+                    startOffset="7615"
+                    endOffset="7623"/>
+            </fix-replace>
+        </fix-composite>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/settings/SettingsScreen.kt"
+            line="196"
+            column="21"
+            startOffset="7564"
+            endLine="196"
+            endColumn="38"
+            endOffset="7581"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?">
+        <fix-composite
+            description="Replace with the edit extension function"
+            family="Replace with the edit extension function"
+            robot="true"
+            independent="true">
+            <fix-replace
+                description="Replace with edit"
+                robot="true"
+                independent="true"
+                oldString="edit("
+                replacement="edit"
+                reformat="value"
+                imports="androidx.core.content.edit"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+                    startOffset="708"
+                    endOffset="713"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with (commit = true) {"
+                robot="true"
+                independent="true"
+                oldString=")"
+                replacement="(commit = true) {"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+                    startOffset="713"
+                    endOffset="714"/>
+            </fix-replace>
+            <fix-replace
+                description="Delete &quot;.&quot;"
+                robot="true"
+                independent="true"
+                oldString="."
+                replacement=""
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+                    startOffset="714"
+                    endOffset="715"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with }"
+                robot="true"
+                independent="true"
+                oldString=".commit()"
+                replacement="}"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+                    startOffset="755"
+                    endOffset="764"/>
+            </fix-replace>
+        </fix-composite>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+            line="19"
+            column="9"
+            startOffset="702"
+            endLine="19"
+            endColumn="21"
+            endOffset="714"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?">
+        <fix-composite
+            description="Replace with the edit extension function"
+            family="Replace with the edit extension function"
+            robot="true"
+            independent="true">
+            <fix-replace
+                description="Replace with edit"
+                robot="true"
+                independent="true"
+                oldString="edit("
+                replacement="edit"
+                reformat="value"
+                imports="androidx.core.content.edit"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+                    startOffset="1108"
+                    endOffset="1113"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with  {"
+                robot="true"
+                independent="true"
+                oldString=")"
+                replacement=" {"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+                    startOffset="1113"
+                    endOffset="1114"/>
+            </fix-replace>
+            <fix-replace
+                description="Delete &quot;.&quot;"
+                robot="true"
+                independent="true"
+                oldString="."
+                replacement=""
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+                    startOffset="1114"
+                    endOffset="1115"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with }"
+                robot="true"
+                independent="true"
+                oldString=".apply()"
+                replacement="}"
+                priority="0">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+                    startOffset="1126"
+                    endOffset="1134"/>
+            </fix-replace>
+        </fix-composite>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/utils/VoiceEventLogger.kt"
+            line="29"
+            column="9"
+            startOffset="1102"
+            endLine="29"
+            endColumn="21"
+            endOffset="1114"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toColorInt` instead?">
+        <fix-replace
+            description="Replace with the toColorInt extension function"
+            family="Replace with the toColorInt extension function"
+            robot="true"
+            independent="true"
+            oldString="android.graphics.Color.parseColor(habit.color)"
+            replacement="habit.color.toColorInt()"
+            reformat="value"
+            imports="androidx.core.graphics.toColorInt"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+                startOffset="34484"
+                endOffset="34530"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+            line="1031"
+            column="15"
+            startOffset="34484"
+            endLine="1031"
+            endColumn="61"
+            endOffset="34530"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toColorInt` instead?">
+        <fix-replace
+            description="Replace with the toColorInt extension function"
+            family="Replace with the toColorInt extension function"
+            robot="true"
+            independent="true"
+            oldString="android.graphics.Color.parseColor(colorHex)"
+            replacement="colorHex.toColorInt()"
+            reformat="value"
+            imports="androidx.core.graphics.toColorInt"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+                startOffset="58555"
+                endOffset="58598"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*2}/com/health/companion/presentation/screens/wellness/WellnessScreen.kt"
+            line="1720"
+            column="39"
+            startOffset="58555"
+            endLine="1720"
+            endColumn="82"
+            endOffset="58598"/>
+    </incident>
+
+</incidents>

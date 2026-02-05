@@ -142,6 +142,7 @@ data class ConversationDTO(
     val title: String = "",
     val created_at: String? = null,  // Бэкенд может не возвращать
     val updated_at: String? = null,
+    val last_message_at: String? = null,  // Время последнего сообщения
     val is_archived: Boolean = false,
     val is_pinned: Boolean = false,
     val summary: String? = null,

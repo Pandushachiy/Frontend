@@ -16,6 +16,7 @@ import androidx.sqlite.db.SupportSQLiteStatement;
 import com.health.companion.data.local.database.ConversationEntity;
 import java.lang.Class;
 import java.lang.Exception;
+import java.lang.Long;
 import java.lang.Object;
 import java.lang.Override;
 import java.lang.String;
@@ -42,6 +43,8 @@ public final class ConversationDao_Impl implements ConversationDao {
 
   private final SharedSQLiteStatement __preparedStmtOfUpdateUpdatedAt;
 
+  private final SharedSQLiteStatement __preparedStmtOfUpdateTitle;
+
   private final SharedSQLiteStatement __preparedStmtOfDeleteAll;
 
   public ConversationDao_Impl(@NonNull final RoomDatabase __db) {
@@ -50,7 +53,7 @@ public final class ConversationDao_Impl implements ConversationDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `conversations` (`id`,`title`,`createdAt`,`updatedAt`,`isArchived`,`isPinned`,`summary`) VALUES (?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `conversations` (`id`,`title`,`createdAt`,`updatedAt`,`lastMessageAt`,`isArchived`,`isPinned`,`summary`) VALUES (?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -60,14 +63,19 @@ public final class ConversationDao_Impl implements ConversationDao {
         statement.bindString(2, entity.getTitle());
         statement.bindLong(3, entity.getCreatedAt());
         statement.bindLong(4, entity.getUpdatedAt());
-        final int _tmp = entity.isArchived() ? 1 : 0;
-        statement.bindLong(5, _tmp);
-        final int _tmp_1 = entity.isPinned() ? 1 : 0;
-        statement.bindLong(6, _tmp_1);
-        if (entity.getSummary() == null) {
-          statement.bindNull(7);
+        if (entity.getLastMessageAt() == null) {
+          statement.bindNull(5);
         } else {
-          statement.bindString(7, entity.getSummary());
+          statement.bindLong(5, entity.getLastMessageAt());
+        }
+        final int _tmp = entity.isArchived() ? 1 : 0;
+        statement.bindLong(6, _tmp);
+        final int _tmp_1 = entity.isPinned() ? 1 : 0;
+        statement.bindLong(7, _tmp_1);
+        if (entity.getSummary() == null) {
+          statement.bindNull(8);
+        } else {
+          statement.bindString(8, entity.getSummary());
         }
       }
     };
@@ -75,7 +83,7 @@ public final class ConversationDao_Impl implements ConversationDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `conversations` SET `id` = ?,`title` = ?,`createdAt` = ?,`updatedAt` = ?,`isArchived` = ?,`isPinned` = ?,`summary` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `conversations` SET `id` = ?,`title` = ?,`createdAt` = ?,`updatedAt` = ?,`lastMessageAt` = ?,`isArchived` = ?,`isPinned` = ?,`summary` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -85,16 +93,21 @@ public final class ConversationDao_Impl implements ConversationDao {
         statement.bindString(2, entity.getTitle());
         statement.bindLong(3, entity.getCreatedAt());
         statement.bindLong(4, entity.getUpdatedAt());
-        final int _tmp = entity.isArchived() ? 1 : 0;
-        statement.bindLong(5, _tmp);
-        final int _tmp_1 = entity.isPinned() ? 1 : 0;
-        statement.bindLong(6, _tmp_1);
-        if (entity.getSummary() == null) {
-          statement.bindNull(7);
+        if (entity.getLastMessageAt() == null) {
+          statement.bindNull(5);
         } else {
-          statement.bindString(7, entity.getSummary());
+          statement.bindLong(5, entity.getLastMessageAt());
         }
-        statement.bindString(8, entity.getId());
+        final int _tmp = entity.isArchived() ? 1 : 0;
+        statement.bindLong(6, _tmp);
+        final int _tmp_1 = entity.isPinned() ? 1 : 0;
+        statement.bindLong(7, _tmp_1);
+        if (entity.getSummary() == null) {
+          statement.bindNull(8);
+        } else {
+          statement.bindString(8, entity.getSummary());
+        }
+        statement.bindString(9, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteById = new SharedSQLiteStatement(__db) {
@@ -109,7 +122,15 @@ public final class ConversationDao_Impl implements ConversationDao {
       @Override
       @NonNull
       public String createQuery() {
-        final String _query = "UPDATE conversations SET updatedAt = ? WHERE id = ?";
+        final String _query = "UPDATE conversations SET updatedAt = ?, lastMessageAt = ? WHERE id = ?";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfUpdateTitle = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "UPDATE conversations SET title = ?, updatedAt = ? WHERE id = ?";
         return _query;
       }
     };
@@ -198,6 +219,8 @@ public final class ConversationDao_Impl implements ConversationDao {
         int _argIndex = 1;
         _stmt.bindLong(_argIndex, updatedAt);
         _argIndex = 2;
+        _stmt.bindLong(_argIndex, updatedAt);
+        _argIndex = 3;
         _stmt.bindString(_argIndex, conversationId);
         try {
           __db.beginTransaction();
@@ -210,6 +233,36 @@ public final class ConversationDao_Impl implements ConversationDao {
           }
         } finally {
           __preparedStmtOfUpdateUpdatedAt.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateTitle(final String conversationId, final String title, final long updatedAt,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfUpdateTitle.acquire();
+        int _argIndex = 1;
+        _stmt.bindString(_argIndex, title);
+        _argIndex = 2;
+        _stmt.bindLong(_argIndex, updatedAt);
+        _argIndex = 3;
+        _stmt.bindString(_argIndex, conversationId);
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfUpdateTitle.release(_stmt);
         }
       }
     }, $completion);
@@ -240,7 +293,7 @@ public final class ConversationDao_Impl implements ConversationDao {
 
   @Override
   public Flow<List<ConversationEntity>> getAllConversationsFlow() {
-    final String _sql = "SELECT * FROM conversations ORDER BY updatedAt DESC";
+    final String _sql = "SELECT * FROM conversations ORDER BY COALESCE(lastMessageAt, updatedAt) DESC";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
     return CoroutinesRoom.createFlow(__db, false, new String[] {"conversations"}, new Callable<List<ConversationEntity>>() {
       @Override
@@ -252,6 +305,7 @@ public final class ConversationDao_Impl implements ConversationDao {
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfUpdatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "updatedAt");
+          final int _cursorIndexOfLastMessageAt = CursorUtil.getColumnIndexOrThrow(_cursor, "lastMessageAt");
           final int _cursorIndexOfIsArchived = CursorUtil.getColumnIndexOrThrow(_cursor, "isArchived");
           final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
           final int _cursorIndexOfSummary = CursorUtil.getColumnIndexOrThrow(_cursor, "summary");
@@ -266,6 +320,12 @@ public final class ConversationDao_Impl implements ConversationDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
+            final Long _tmpLastMessageAt;
+            if (_cursor.isNull(_cursorIndexOfLastMessageAt)) {
+              _tmpLastMessageAt = null;
+            } else {
+              _tmpLastMessageAt = _cursor.getLong(_cursorIndexOfLastMessageAt);
+            }
             final boolean _tmpIsArchived;
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsArchived);
@@ -280,7 +340,7 @@ public final class ConversationDao_Impl implements ConversationDao {
             } else {
               _tmpSummary = _cursor.getString(_cursorIndexOfSummary);
             }
-            _item = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
+            _item = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpLastMessageAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
             _result.add(_item);
           }
           return _result;
@@ -299,7 +359,7 @@ public final class ConversationDao_Impl implements ConversationDao {
   @Override
   public Object getAllConversations(
       final Continuation<? super List<ConversationEntity>> $completion) {
-    final String _sql = "SELECT * FROM conversations ORDER BY updatedAt DESC";
+    final String _sql = "SELECT * FROM conversations ORDER BY COALESCE(lastMessageAt, updatedAt) DESC";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
     final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
     return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<List<ConversationEntity>>() {
@@ -312,6 +372,7 @@ public final class ConversationDao_Impl implements ConversationDao {
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfUpdatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "updatedAt");
+          final int _cursorIndexOfLastMessageAt = CursorUtil.getColumnIndexOrThrow(_cursor, "lastMessageAt");
           final int _cursorIndexOfIsArchived = CursorUtil.getColumnIndexOrThrow(_cursor, "isArchived");
           final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
           final int _cursorIndexOfSummary = CursorUtil.getColumnIndexOrThrow(_cursor, "summary");
@@ -326,6 +387,12 @@ public final class ConversationDao_Impl implements ConversationDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
+            final Long _tmpLastMessageAt;
+            if (_cursor.isNull(_cursorIndexOfLastMessageAt)) {
+              _tmpLastMessageAt = null;
+            } else {
+              _tmpLastMessageAt = _cursor.getLong(_cursorIndexOfLastMessageAt);
+            }
             final boolean _tmpIsArchived;
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsArchived);
@@ -340,7 +407,7 @@ public final class ConversationDao_Impl implements ConversationDao {
             } else {
               _tmpSummary = _cursor.getString(_cursorIndexOfSummary);
             }
-            _item = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
+            _item = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpLastMessageAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
             _result.add(_item);
           }
           return _result;
@@ -370,6 +437,7 @@ public final class ConversationDao_Impl implements ConversationDao {
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfUpdatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "updatedAt");
+          final int _cursorIndexOfLastMessageAt = CursorUtil.getColumnIndexOrThrow(_cursor, "lastMessageAt");
           final int _cursorIndexOfIsArchived = CursorUtil.getColumnIndexOrThrow(_cursor, "isArchived");
           final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
           final int _cursorIndexOfSummary = CursorUtil.getColumnIndexOrThrow(_cursor, "summary");
@@ -383,6 +451,12 @@ public final class ConversationDao_Impl implements ConversationDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
+            final Long _tmpLastMessageAt;
+            if (_cursor.isNull(_cursorIndexOfLastMessageAt)) {
+              _tmpLastMessageAt = null;
+            } else {
+              _tmpLastMessageAt = _cursor.getLong(_cursorIndexOfLastMessageAt);
+            }
             final boolean _tmpIsArchived;
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsArchived);
@@ -397,7 +471,7 @@ public final class ConversationDao_Impl implements ConversationDao {
             } else {
               _tmpSummary = _cursor.getString(_cursorIndexOfSummary);
             }
-            _result = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
+            _result = new ConversationEntity(_tmpId,_tmpTitle,_tmpCreatedAt,_tmpUpdatedAt,_tmpLastMessageAt,_tmpIsArchived,_tmpIsPinned,_tmpSummary);
           } else {
             _result = null;
           }
