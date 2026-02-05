@@ -296,13 +296,13 @@ class ChatViewModel @Inject constructor(
                     id = userMessageId,
                     content = text,
                     role = "user",
-                    agent_name = null,
+                    agentName = null,
                     provider = null,
-                    provider_color = null,
-                    model_used = null,
-                    created_at = System.currentTimeMillis().toString(),
-                    imageUrl = null, // imageUrl is for AI-generated images
-                    images = attachedImageUris // Прикреплённые пользователем изображения (URI для отображения)
+                    providerColor = null,
+                    modelUsed = null,
+                    createdAt = System.currentTimeMillis().toString(),
+                    imageUrl = null,
+                    images = attachedImageUris
                 )
                 _messages.value = _messages.value + userMessage
                 android.util.Log.d("CHAT_DEBUG", "Added user message with images: ${userMessage.images}")
@@ -348,11 +348,11 @@ class ChatViewModel @Inject constructor(
                                     id = streamingMessageId,
                                     content = currentContent,
                                     role = "assistant",
-                                    agent_name = "streaming", // Flag for animation
+                                    agentName = "streaming", // Flag for animation
                                     provider = null,
-                                    provider_color = null,
-                                    model_used = null,
-                                    created_at = System.currentTimeMillis().toString(),
+                                    providerColor = null,
+                                    modelUsed = null,
+                                    createdAt = System.currentTimeMillis().toString(),
                                     imageUrl = currentImageUrl
                                 )
                                 _messages.value = _messages.value + msg
@@ -386,11 +386,11 @@ class ChatViewModel @Inject constructor(
                                     id = streamingMessageId,
                                     content = "",
                                     role = "assistant",
-                                    agent_name = "streaming",
+                                    agentName = "streaming",
                                     provider = null,
-                                    provider_color = null,
-                                    model_used = null,
-                                    created_at = System.currentTimeMillis().toString(),
+                                    providerColor = null,
+                                    modelUsed = null,
+                                    createdAt = System.currentTimeMillis().toString(),
                                     imageUrl = fullUrl
                                 )
                                 _messages.value = _messages.value + msg
@@ -469,7 +469,7 @@ class ChatViewModel @Inject constructor(
                             
                             // NOW remove streaming flag
                             _messages.value = _messages.value.map { m ->
-                                if (m.id == streamingMessageId) m.copy(agent_name = null) else m
+                                if (m.id == streamingMessageId) m.copy(agentName = null) else m
                             }
                             
                             _isStreaming.value = false
@@ -643,12 +643,11 @@ class ChatViewModel @Inject constructor(
                         id = UUID.randomUUID().toString(),
                         content = if (isImage) "📷 Фото добавлено в контекст" else "📎 Файл загружен: ${response.filename}",
                         role = "assistant",
-                        agent_name = "system",
+                        agentName = "system",
                         provider = "system",
-                        provider_color = null,
-                        model_used = null,
-                        created_at = System.currentTimeMillis().toString(),
-                        // Для изображений добавляем превью
+                        providerColor = null,
+                        modelUsed = null,
+                        createdAt = System.currentTimeMillis().toString(),
                         images = if (isImage) listOf(uri.toString()) else null
                     )
                     _messages.value = _messages.value + systemMessage

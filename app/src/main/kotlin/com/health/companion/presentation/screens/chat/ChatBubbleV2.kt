@@ -148,10 +148,10 @@ fun ChatBubbleV2(
     
     val formattedText = remember(message.content) { formatMessageTextV2(message.content) }
     
-    val timestamp = remember(message.created_at) {
+    val timestamp = remember(message.createdAt) {
         try {
             val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-            dateFormat.format(Date(message.created_at?.toLongOrNull() ?: System.currentTimeMillis()))
+            dateFormat.format(Date(message.createdAt?.toLongOrNull() ?: System.currentTimeMillis()))
         } catch (e: Exception) { "" }
     }
     
@@ -270,11 +270,11 @@ fun ChatBubbleV2(
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Column {
-                                if (message.agent_name != null && 
-                                    message.agent_name !in listOf("chat", "offline", "streaming", "system") &&
+                                if (message.agentName != null && 
+                                    message.agentName !in listOf("chat", "offline", "streaming", "system") &&
                                     isFirstInGroup && !hasGeneratedImage && !hasUploadedImages) {
                                     Text(
-                                        text = message.agent_name,
+                                        text = message.agentName,
                                         style = GlassTypography.timestamp.copy(
                                             color = GlassColors.accent,
                                             fontWeight = FontWeight.Medium

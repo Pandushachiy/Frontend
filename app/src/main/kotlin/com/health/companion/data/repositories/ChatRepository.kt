@@ -430,11 +430,11 @@ class ChatRepositoryImpl @Inject constructor(
                     id = entity.id,
                     content = entity.content,
                     role = entity.role,
-                    agent_name = entity.agentName,
+                    agentName = entity.agentName,
                     provider = entity.provider,
-                    provider_color = entity.providerColor,
-                    model_used = entity.modelUsed,
-                    created_at = entity.createdAt.toString(),
+                    providerColor = entity.providerColor,
+                    modelUsed = entity.modelUsed,
+                    createdAt = entity.createdAt.toString(),
                     imageUrl = entity.imageUrl,  // Читаем URL изображения из БД
                     images = entity.images?.let { 
                         try { Json.decodeFromString<List<String>>(it) } catch (e: Exception) { null }
@@ -552,7 +552,7 @@ class ChatRepositoryImpl @Inject constructor(
             }
             
             val entities = response.map { msg ->
-                val createdMs = msg.created_at?.let { 
+                val createdMs = msg.createdAt?.let { 
                     it.toLongOrNull() ?: parseIsoDateTime(it) 
                 } ?: System.currentTimeMillis()
                 
@@ -561,10 +561,10 @@ class ChatRepositoryImpl @Inject constructor(
                     conversationId = conversationId,
                     content = msg.content,
                     role = msg.role,
-                    agentName = msg.agent_name,
+                    agentName = msg.agentName,
                     provider = msg.provider,
-                    providerColor = msg.provider_color,
-                    modelUsed = msg.model_used,
+                    providerColor = msg.providerColor,
+                    modelUsed = msg.modelUsed,
                     createdAt = createdMs,
                     imageUrl = msg.imageUrl,  // URL от бэкенда
                     images = msg.images?.let { Json.encodeToString(it) }  // URLs от бэкенда

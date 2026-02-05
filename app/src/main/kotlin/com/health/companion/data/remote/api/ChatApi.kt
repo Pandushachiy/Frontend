@@ -152,18 +152,18 @@ data class ConversationDTO(
 @Serializable
 data class MessageDTO(
     val id: String,
-    val conversation_id: String? = null,
+    val conversationId: String? = null,
     val content: String,
     val role: String,
-    val agent_name: String? = null,
+    val agentName: String? = null,
     val provider: String? = null,
-    val provider_color: String? = null,
-    val model_used: String? = null,
-    val tokens_used: Int? = null,
-    val processing_time: Int? = null,
-    val created_at: String? = null,  // Nullable — backend может не возвращать
-    val imageUrl: String? = null,  // URL сгенерированной картинки от AI (camelCase от бэка)
-    val images: List<String>? = null  // Прикреплённые пользователем изображения
+    val providerColor: String? = null,
+    val modelUsed: String? = null,
+    val tokensUsed: Int? = null,
+    val processingTime: Int? = null,
+    val createdAt: String? = null,  // camelCase от бэка
+    val imageUrl: String? = null,
+    val images: List<String>? = null
 )
 
 @Serializable

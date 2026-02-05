@@ -544,7 +544,7 @@ fun ChatScreen(
                 
                 val lastMsg = messages.lastOrNull()
                 val lastMsgImageUrl = lastMsg?.imageUrl
-                val lastMsgAgent = lastMsg?.agent_name
+                val lastMsgAgent = lastMsg?.agentName
                 val lastMsgContent = lastMsg?.content ?: ""
                 
                 // Проверяем есть ли уже результат (текст или изображение)
@@ -657,7 +657,7 @@ fun ChatScreen(
                     }
                     
                     // Animate streaming messages only
-                    val shouldAnimate = message.agent_name == "streaming"
+                    val shouldAnimate = message.agentName == "streaming"
                     
                     ChatBubbleV2(
                         message = message,
