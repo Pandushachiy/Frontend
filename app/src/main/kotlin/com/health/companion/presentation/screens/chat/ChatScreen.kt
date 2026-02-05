@@ -284,12 +284,13 @@ fun ChatScreen(
                         animationSpec = tween(150)
                     )
                 ) {
-                    // Компактное окно диалогов — без затемнения, плавающее
+                    // Окно сессий — на всю ширину, растёт вниз
                     Box(
                         modifier = Modifier
-                            .padding(start = 10.dp, top = 55.dp)  // Под иконкой сессий
-                            .width(280.dp)
-                            .heightIn(max = 400.dp)
+                            .padding(horizontal = 12.dp, vertical = 55.dp)  // Отступы по краям
+                            .fillMaxWidth()
+                            .wrapContentHeight()  // Высота по контенту
+                            .heightIn(max = 500.dp)  // Но не больше 500dp
                             .shadow(
                                 elevation = 16.dp,
                                 shape = RoundedCornerShape(16.dp),

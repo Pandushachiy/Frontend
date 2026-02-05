@@ -718,7 +718,8 @@ class ChatRepositoryImpl @Inject constructor(
     private fun parseIsoDateTime(isoString: String): Long {
         return try {
             android.util.Log.d("TIME_PARSE", "Parsing: $isoString")
-            // Parse ISO-8601: "2026-02-03T17:39:00Z" or "2026-02-03T17:39:00.123456"
+            // Parse ISO-8601: "2026-02-03T17:39:00Z" — Z означает UTC
+            val isUtc = isoString.endsWith("Z")
             val cleaned = isoString
                 .replace("Z", "")
                 .replace(Regex("\\.\\d+"), "") // Remove microseconds
@@ -726,14 +727,17 @@ class ChatRepositoryImpl @Inject constructor(
             
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 val localDateTime = java.time.LocalDateTime.parse(cleaned)
-                val zoneId = java.time.ZoneId.systemDefault()
+                // Если время в UTC — конвертируем правильно
+                val zoneId = if (isUtc) java.time.ZoneId.of("UTC") else java.time.ZoneId.systemDefault()
                 val millis = localDateTime.atZone(zoneId).toInstant().toEpochMilli()
-                android.util.Log.d("TIME_PARSE", "Parsed to millis: $millis (${java.util.Date(millis)})")
+                android.util.Log.d("TIME_PARSE", "Parsed to millis: $millis (${java.util.Date(millis)}) isUtc=$isUtc")
                 millis
             } else {
                 val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                // Для UTC времени устанавливаем timezone
+                if (isUtc) sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
                 val millis = sdf.parse(cleaned)?.time ?: System.currentTimeMillis()
-                android.util.Log.d("TIME_PARSE", "Parsed (legacy) to millis: $millis")
+                android.util.Log.d("TIME_PARSE", "Parsed (legacy) to millis: $millis isUtc=$isUtc")
                 millis
             }
         } catch (e: Exception) {
