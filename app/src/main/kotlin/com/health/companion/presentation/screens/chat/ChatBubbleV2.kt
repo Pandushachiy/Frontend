@@ -382,14 +382,7 @@ fun ChatBubbleV2(
                     style = GlassTypography.timestamp.copy(fontSize = 10.sp)
                 )
                 
-                if (isUser && status != null) {
-                    Spacer(Modifier.width(3.dp))
-                    when (status) {
-                        MessageSendStatus.Sending -> Text("○", style = GlassTypography.timestamp.copy(fontSize = 10.sp))
-                        MessageSendStatus.Sent -> Text("✓✓", style = GlassTypography.timestamp.copy(fontSize = 10.sp, color = GlassColors.mint))
-                        MessageSendStatus.Failed -> Text("✗", style = GlassTypography.timestamp.copy(fontSize = 10.sp, color = GlassColors.error))
-                    }
-                }
+                // Галочки убраны — только время
             }
         }
         
@@ -832,6 +825,9 @@ private fun parseInlineMarkdown(text: String): AnnotatedString {
     return buildAnnotatedString {
         // Используем regex для корректного парсинга **bold** и *italic*
         var current = text
+            // Фикс прилипших чисел: "26февраля" -> "26 февраля"
+            .replace(Regex("(\\d)([а-яА-ЯёЁ])")) { "${it.groupValues[1]} ${it.groupValues[2]}" }
+            .replace(Regex("([а-яА-ЯёЁ])(\\d)")) { "${it.groupValues[1]} ${it.groupValues[2]}" }
             // Сначала заменяем ** (жирный) - ВАЖНО: до одинарных *
             .replace(Regex("\\*\\*(.+?)\\*\\*")) { "⬛BOLD⬛${it.groupValues[1]}⬛BOLD⬛" }
             .replace(Regex("__(.+?)__")) { "⬛BOLD⬛${it.groupValues[1]}⬛BOLD⬛" }
