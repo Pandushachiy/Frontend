@@ -68,9 +68,21 @@ interface ChatRepository {
     suspend fun syncConversationMessages(conversationId: String): Result<List<MessageDTO>>
     suspend fun deleteConversation(conversationId: String): Result<Unit>
     suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit>
+    suspend fun regenerateTitle(conversationId: String): Result<String>
     fun connectWebSocket(userId: String): Flow<WebSocketMessage>
     suspend fun disconnectWebSocket()
     suspend fun clearAllLocalData()
+    
+    /**
+     * Save messages to local DB (called from ViewModel after SSE completes)
+     */
+    suspend fun saveStreamedMessages(
+        conversationId: String,
+        userMessage: String,
+        assistantMessageId: String,
+        assistantContent: String,
+        imageUrl: String? = null
+    )
 }
 
 class ChatRepositoryImpl @Inject constructor(
@@ -293,7 +305,28 @@ class ChatRepositoryImpl @Inject constructor(
                             }
                             "token" -> {
                                 val content = json.optString("content")
-                                onToken(content)
+                                
+                                // Check if token contains error JSON (backend sometimes sends errors as tokens)
+                                if (content.contains("{\"error\"") || content.contains("Ошибка генерации")) {
+                                    // Try to extract clean error message
+                                    val errorMatch = """\{"error":\s*\{"message":\s*"([^"]+)"""".toRegex()
+                                        .find(content)
+                                    val cleanError = errorMatch?.groupValues?.get(1) 
+                                        ?: content.replace("""❌\s*Ошибка генерации:\s*""".toRegex(), "")
+                                            .replace("""Ошибка генерации:\s*""".toRegex(), "")
+                                            .let { 
+                                                // Try parse JSON error
+                                                try {
+                                                    val errJson = JSONObject(it)
+                                                    errJson.optJSONObject("error")?.optString("message") ?: it
+                                                } catch (e: Exception) { it }
+                                            }
+                                    onError("❌ $cleanError")
+                                    eventSource.cancel()
+                                    if (continuation.isActive) continuation.resume(Unit)
+                                } else {
+                                    onToken(content)
+                                }
                             }
                             "image" -> {
                                 val url = json.optString("url")
@@ -319,42 +352,21 @@ class ChatRepositoryImpl @Inject constructor(
                                     onImage(imageUrl, "")
                                 }
                                 
-                                // Save to DB in background
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    try {
-                                        val convId = newConvId ?: savedConversationId ?: UUID.randomUUID().toString()
-                                        ensureConversationExists(convId, suggestTitleFromMessage(savedMessage))
-                                        
-                                        chatMessageDao.insert(
-                                            ChatMessageEntity(
-                                                id = UUID.randomUUID().toString(),
-                                                conversationId = convId,
-                                                content = savedMessage,
-                                                role = "user"
-                                            )
-                                        )
-                                        
-                                        chatMessageDao.insert(
-                                            ChatMessageEntity(
-                                                id = messageId.ifEmpty { UUID.randomUUID().toString() },
-                                                conversationId = convId,
-                                                content = fullContent,
-                                                role = "assistant"
-                                            )
-                                        )
-                                        conversationDao.updateUpdatedAt(convId, System.currentTimeMillis())
-                                    } catch (e: Exception) {
-                                        Timber.e(e, "Failed to save messages to DB")
-                                    }
-                                }
+                                // NOTE: Messages are saved in ViewModel.saveStreamedMessages() 
+                                // with proper accumulated content (fullContent from SSE may be empty)
                                 
-                                Timber.d("SSE done: messageId=$messageId")
+                                Timber.d("SSE done: messageId=$messageId, content len=${fullContent.length}")
                                 onDone(messageId, fullContent, newConvId)
                                 eventSource.cancel()
                                 if (continuation.isActive) continuation.resume(Unit)
                             }
                             "error" -> {
-                                val errorMsg = json.optString("message", "Неизвестная ошибка")
+                                // Parse nested error structure: {"error":{"message":"...", "type":"..."}}
+                                val errorObj = json.optJSONObject("error")
+                                val errorMsg = errorObj?.optString("message") 
+                                    ?: json.optString("message")
+                                    ?: json.optString("error")
+                                    ?: "Неизвестная ошибка"
                                 Timber.e("SSE error event: $errorMsg")
                                 onError(errorMsg)
                                 eventSource.cancel()
@@ -407,6 +419,10 @@ class ChatRepositoryImpl @Inject constructor(
     
     override fun getConversationMessages(conversationId: String): Flow<List<MessageDTO>> {
         return chatMessageDao.getMessagesFlow(conversationId).map { entities ->
+            android.util.Log.d("GET_MSGS", "📦 Room: ${entities.size} msgs for $conversationId")
+            entities.forEachIndexed { i, e -> 
+                android.util.Log.d("GET_MSGS", "  [$i] role=${e.role}, imageUrl=${e.imageUrl}, content=${e.content.take(30)}...")
+            }
             entities.map { entity ->
                 MessageDTO(
                     id = entity.id,
@@ -416,7 +432,8 @@ class ChatRepositoryImpl @Inject constructor(
                     provider = entity.provider,
                     provider_color = entity.providerColor,
                     model_used = entity.modelUsed,
-                    created_at = entity.createdAt.toString()
+                    created_at = entity.createdAt.toString(),
+                    imageUrl = entity.imageUrl  // Читаем URL изображения из БД
                 )
             }
         }
@@ -428,9 +445,25 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun getConversations(): Result<List<ConversationDTO>> {
         return try {
-            val response = chatApi.getConversations()
+            android.util.Log.d("CONV_REPO", "📡 Calling API getConversations...")
+            
+            // Загружаем все страницы
+            val allItems = mutableListOf<ConversationDTO>()
+            var currentPage = 1
+            var totalPages = 1
+            
+            do {
+                val response = chatApi.getConversations(size = 50, page = currentPage)
+                android.util.Log.d("CONV_REPO", "📥 Page $currentPage/${response.pages}: ${response.items.size} items, total=${response.total}")
+                allItems.addAll(response.items)
+                totalPages = response.pages
+                currentPage++
+            } while (currentPage <= totalPages && currentPage <= 10) // Макс 10 страниц для защиты
+            
+            android.util.Log.d("CONV_REPO", "✅ Total loaded: ${allItems.size} conversations")
+            
             val now = System.currentTimeMillis()
-            val serverIds = response.items.map { it.id }.toSet()
+            val serverIds = allItems.map { it.id }.toSet()
             
             // Get current local IDs
             val localIds = conversationDao.getAllConversations().map { it.id }.toSet()
@@ -440,21 +473,25 @@ class ChatRepositoryImpl @Inject constructor(
             toDelete.forEach { id -> conversationDao.deleteById(id) }
             
             // Upsert server conversations
-            response.items.forEach { dto ->
+            allItems.forEach { dto ->
+                // Parse ISO datetime from backend (e.g. "2026-02-03T17:39:00Z")
+                val createdMs = dto.created_at?.let { parseIsoDateTime(it) } ?: now
+                val updatedMs = dto.updated_at?.let { parseIsoDateTime(it) } ?: createdMs
+                
                 conversationDao.insert(
                     ConversationEntity(
                         id = dto.id,
                         title = dto.title.ifBlank { "Новый чат" },
-                        createdAt = now,
-                        updatedAt = now,
+                        createdAt = createdMs,
+                        updatedAt = updatedMs,
                         isArchived = dto.is_archived,
                         isPinned = dto.is_pinned,
                         summary = dto.summary
                     )
                 )
             }
-            Timber.d("Synced ${response.items.size} conversations, removed ${toDelete.size} stale")
-            Result.success(response.items)
+            Timber.d("Synced ${allItems.size} conversations, removed ${toDelete.size} stale")
+            Result.success(allItems)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get conversations from server")
             Result.failure(e)
@@ -502,7 +539,16 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun syncConversationMessages(conversationId: String): Result<List<MessageDTO>> {
         return try {
             val response = chatApi.getMessages(conversationId)
+            android.util.Log.d("SYNC_MESSAGES", "📥 Loaded ${response.size} messages for $conversationId")
+            response.forEachIndexed { index, msg ->
+                android.util.Log.d("SYNC_MESSAGES", "  [$index] role=${msg.role}, imageUrl=${msg.imageUrl}, content=${msg.content.take(50)}...")
+            }
             val entities = response.map { msg ->
+                // Парсим время — может быть ISO datetime или timestamp
+                val createdMs = msg.created_at?.let { 
+                    it.toLongOrNull() ?: parseIsoDateTime(it) 
+                } ?: System.currentTimeMillis()
+                
                 ChatMessageEntity(
                     id = msg.id,
                     conversationId = conversationId,
@@ -512,11 +558,15 @@ class ChatRepositoryImpl @Inject constructor(
                     provider = msg.provider,
                     providerColor = msg.provider_color,
                     modelUsed = msg.model_used,
-                    createdAt = parseTimestamp(msg.created_at)
+                    createdAt = createdMs,
+                    imageUrl = msg.imageUrl  // Сохраняем URL сгенерированного изображения
                 )
             }
             chatMessageDao.insertAll(entities)
-            conversationDao.updateUpdatedAt(conversationId, System.currentTimeMillis())
+            // Устанавливаем updatedAt как время последнего сообщения (не текущее системное!)
+            val lastMessageTime = entities.maxOfOrNull { it.createdAt } ?: System.currentTimeMillis()
+            conversationDao.updateUpdatedAt(conversationId, lastMessageTime)
+            android.util.Log.d("TIME_SYNC", "📅 Updated conversation $conversationId time to ${java.util.Date(lastMessageTime)}")
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
@@ -565,6 +615,26 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
     
+    /**
+     * Регенерация названия сессии через LLM на бэкенде
+     * Автоматически анализирует сообщения и создаёт осмысленное название
+     */
+    override suspend fun regenerateTitle(conversationId: String): Result<String> {
+        return try {
+            val response = chatApi.regenerateTitle(conversationId)
+            val newTitle = response.title
+            
+            // Update local DB
+            conversationDao.updateTitle(conversationId, newTitle)
+            
+            Timber.d("Title regenerated for $conversationId: $newTitle")
+            Result.success(newTitle)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to regenerate title")
+            Result.failure(e)
+        }
+    }
+    
     override fun connectWebSocket(userId: String): Flow<WebSocketMessage> {
         return webSocketManager.connect(userId)
     }
@@ -577,6 +647,51 @@ class ChatRepositoryImpl @Inject constructor(
         chatMessageDao.deleteAll()
         conversationDao.deleteAll()
         Timber.d("All local chat data cleared")
+    }
+    
+    /**
+     * Save streamed messages to local DB (called from ViewModel after SSE completes)
+     */
+    override suspend fun saveStreamedMessages(
+        conversationId: String,
+        userMessage: String,
+        assistantMessageId: String,
+        assistantContent: String,
+        imageUrl: String?
+    ) {
+        try {
+            ensureConversationExists(conversationId, suggestTitleFromMessage(userMessage))
+            
+            // Save user message
+            chatMessageDao.insert(
+                ChatMessageEntity(
+                    id = UUID.randomUUID().toString(),
+                    conversationId = conversationId,
+                    content = userMessage,
+                    role = "user"
+                )
+            )
+            
+            // Save assistant message with accumulated content and image URL
+            val msgTimestamp = System.currentTimeMillis()
+            chatMessageDao.insert(
+                ChatMessageEntity(
+                    id = assistantMessageId.ifEmpty { UUID.randomUUID().toString() },
+                    conversationId = conversationId,
+                    content = assistantContent,
+                    role = "assistant",
+                    imageUrl = imageUrl,
+                    createdAt = msgTimestamp
+                )
+            )
+            
+            // Обновляем время диалога временем последнего сообщения
+            conversationDao.updateUpdatedAt(conversationId, msgTimestamp)
+            android.util.Log.d("SAVE_MSG", "✅ Saved: user='${userMessage.take(30)}', assistant len=${assistantContent.length}, imageUrl=$imageUrl")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to save streamed messages")
+            android.util.Log.e("SAVE_MSG", "❌ Failed to save: ${e.message}")
+        }
     }
     
     private suspend fun ensureConversationExists(conversationId: String, title: String? = null) {
@@ -592,6 +707,34 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
+    private fun parseIsoDateTime(isoString: String): Long {
+        return try {
+            android.util.Log.d("TIME_PARSE", "Parsing: $isoString")
+            // Parse ISO-8601: "2026-02-03T17:39:00Z" or "2026-02-03T17:39:00.123456"
+            val cleaned = isoString
+                .replace("Z", "")
+                .replace(Regex("\\.\\d+"), "") // Remove microseconds
+                .substringBefore("+")
+            
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val localDateTime = java.time.LocalDateTime.parse(cleaned)
+                val zoneId = java.time.ZoneId.systemDefault()
+                val millis = localDateTime.atZone(zoneId).toInstant().toEpochMilli()
+                android.util.Log.d("TIME_PARSE", "Parsed to millis: $millis (${java.util.Date(millis)})")
+                millis
+            } else {
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                val millis = sdf.parse(cleaned)?.time ?: System.currentTimeMillis()
+                android.util.Log.d("TIME_PARSE", "Parsed (legacy) to millis: $millis")
+                millis
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("TIME_PARSE", "Failed to parse: $isoString", e)
+            Timber.w(e, "Failed to parse ISO datetime: $isoString")
+            System.currentTimeMillis()
+        }
+    }
+    
     private fun parseTimestamp(createdAt: String?): Long {
         return createdAt?.toLongOrNull() ?: System.currentTimeMillis()
     }

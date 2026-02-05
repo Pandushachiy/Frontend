@@ -61,9 +61,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -82,12 +86,19 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.layout.ContentScale
 import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
     bottomBarPadding: PaddingValues = PaddingValues(0.dp),
-    onMessageSent: () -> Unit = {}
+    onMessageSent: () -> Unit = {},
+    onNavigate: (String) -> Unit = {} // Для навигации без bottom bar
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val messages by viewModel.messages.collectAsState()
@@ -136,7 +147,7 @@ fun ChatScreen(
     var photoUri by remember { mutableStateOf<Uri?>(null) }
     var showChatsSheet by remember { mutableStateOf(false) }
     var showAttachmentsSheet by remember { mutableStateOf(false) }
-    val chatSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // chatSheetState больше не нужен — используем Dialog с fadeIn
 
     // Permissions
     var hasAudioPermission by remember {
@@ -221,7 +232,14 @@ fun ChatScreen(
     }
 
     // Reversed messages for reverseLayout (newest at index 0)
-    val reversedMessages = remember(messages) { messages.reversed() }
+    // Filter out empty messages (no content, no images, no imageUrl)
+    val reversedMessages = remember(messages) { 
+        messages.filter { msg ->
+            msg.content.isNotBlank() || 
+            !msg.images.isNullOrEmpty() || 
+            msg.imageUrl != null
+        }.reversed() 
+    }
 
     // Auto-scroll to bottom (index 0 in reverseLayout) when new message arrives
     LaunchedEffect(messages.size) {
@@ -231,339 +249,149 @@ fun ChatScreen(
         }
     }
 
-    // Chats bottom sheet - Feyberry Style
+    // Chats Dialog - Плавное появление fadeIn (без выезжания)
     if (showChatsSheet) {
-        ModalBottomSheet(
+        Dialog(
             onDismissRequest = { showChatsSheet = false },
-            sheetState = chatSheetState,
-            containerColor = Color.Transparent,
-            dragHandle = null,
-            scrimColor = Color.Black.copy(alpha = 0.6f)
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false  // НЕ реагировать на клавиатуру!
+            )
         ) {
+            // Анимированное появление — мягкий fadeIn + легкий scaleIn
+            var visible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { visible = true }
+            
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(GlassTheme.backgroundGradient)
+                    .fillMaxSize()
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { showChatsSheet = false },
+                contentAlignment = Alignment.TopStart  // Сверху слева, рядом с иконкой
             ) {
-                // Glass overlay
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .matchParentSize()
-                        .background(Color.White.copy(alpha = 0.03f))
-                )
-                
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .padding(bottom = 40.dp)
+                AnimatedVisibility(
+                    visible = visible,
+                    enter = fadeIn(tween(200)) + scaleIn(
+                        initialScale = 0.95f,
+                        animationSpec = tween(200, easing = FastOutSlowInEasing)
+                    ),
+                    exit = fadeOut(tween(150)) + scaleOut(
+                        targetScale = 0.95f,
+                        animationSpec = tween(150)
+                    )
                 ) {
-                    // Drag handle
+                    // Компактное окно диалогов — без затемнения, плавающее
                     Box(
                         modifier = Modifier
-                            .padding(vertical = 14.dp)
-                            .align(Alignment.CenterHorizontally)
-                            .size(48.dp, 4.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    colors = listOf(
-                                        GlassTheme.accentPrimary.copy(alpha = 0.3f),
-                                        GlassTheme.accentSecondary.copy(alpha = 0.5f),
-                                        GlassTheme.accentPrimary.copy(alpha = 0.3f)
-                                    )
-                                )
+                            .padding(start = 10.dp, top = 55.dp)  // Под иконкой сессий
+                            .width(280.dp)
+                            .heightIn(max = 400.dp)
+                            .shadow(
+                                elevation = 16.dp,
+                                shape = RoundedCornerShape(16.dp),
+                                ambientColor = Color.Black.copy(alpha = 0.3f),
+                                spotColor = Color.Black.copy(alpha = 0.3f)
                             )
-                    )
-                    
-                    Spacer(Modifier.height(8.dp))
-                    
-                    // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Berry icon
-                            Box(
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(GlassColors.surface)
+                            .border(
+                                width = 1.dp,
+                                color = GlassColors.accentSecondary.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) { /* блокируем клик наружу */ }
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Header — компактный
+                            Row(
                                 modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(
-                                                GlassTheme.accentPrimary.copy(alpha = 0.2f),
-                                                GlassTheme.accentSecondary.copy(alpha = 0.15f)
-                                            )
-                                        )
-                                    )
-                                    .border(
-                                        1.dp,
-                                        Brush.linearGradient(
-                                            colors = listOf(
-                                                GlassTheme.accentPrimary.copy(alpha = 0.4f),
-                                                GlassTheme.accentSecondary.copy(alpha = 0.2f)
-                                            )
-                                        ),
-                                        RoundedCornerShape(14.dp)
-                                    ),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("🫐", fontSize = 24.sp)
-                            }
-                            Spacer(Modifier.width(14.dp))
-                            Column {
-                    Text(
-                                    text = "Диалоги",
-                        style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = if (conversations.isEmpty()) "Нет сессий" 
-                                           else "${conversations.size} ${if (conversations.size == 1) "сессия" else "сессий"}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.5f)
-                                )
-                            }
-                        }
-                        
-                        // New chat button
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(
-                                            GlassTheme.accentPrimary,
-                                            GlassTheme.accentSecondary
-                                        )
-                                    )
-                                )
-                                .clickable {
-                        showChatsSheet = false
-                                    coroutineScope.launch {
-                                        delay(200)
-                                        viewModel.createNewConversation()
-                                    }
-                                }
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    Icons.Default.Add,
+                                    Icons.AutoMirrored.Filled.Chat,
                                     contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = GlassColors.accentSecondary,
+                                    modifier = Modifier.size(22.dp)
                                 )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    "Новый",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                    }
-                }
-
-                    Spacer(Modifier.height(24.dp))
-
-                if (conversations.isEmpty()) {
-                        // Empty state - Feyberry style
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
-                                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
-                                .padding(vertical = 48.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                // Animated berry
+                                
+                                // Кнопка "+"
                                 Box(
                                     modifier = Modifier
-                                        .size(72.dp)
-                                        .clip(CircleShape)
+                                        .size(29.dp)
+                                        .clip(RoundedCornerShape(8.dp))
                                         .background(
-                                            Brush.radialGradient(
-                                                colors = listOf(
-                                                    GlassTheme.accentPrimary.copy(alpha = 0.2f),
-                                                    Color.Transparent
-                                                )
+                                            Brush.linearGradient(
+                                                colors = listOf(GlassColors.mint, GlassColors.mint.copy(alpha = 0.8f))
                                             )
-                                        ),
+                                        )
+                                        .clickable {
+                                            showChatsSheet = false
+                                            viewModel.createNewConversation()
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("🫐", fontSize = 40.sp)
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = "Новый",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
-                                Spacer(Modifier.height(20.dp))
-                    Text(
-                                    text = "Начни первый диалог",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White.copy(alpha = 0.9f)
-                                )
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    text = "Нажми «Новый» чтобы создать чат",
-                        style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.5f)
-                    )
                             }
-                        }
-                } else {
-                        // Conversations list
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                    conversations.forEach { convo ->
-                                val isSelected = convo.id == currentConversationId
-                                val dateFormat = remember { SimpleDateFormat("dd MMM, HH:mm", Locale("ru")) }
-                                
-                                Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                        .clip(RoundedCornerShape(18.dp))
-                                        .background(
-                                            if (isSelected)
-                                                Brush.linearGradient(
-                                                    colors = listOf(
-                                                        GlassTheme.accentPrimary.copy(alpha = 0.15f),
-                                                        GlassTheme.accentSecondary.copy(alpha = 0.1f)
-                                                    )
-                                                )
-                                            else
-                                                Brush.linearGradient(
-                                                    colors = listOf(
-                                                        Color.White.copy(alpha = 0.06f),
-                                                        Color.White.copy(alpha = 0.03f)
-                                                    )
-                                                )
-                                        )
-                                        .border(
-                                            1.dp,
-                                            if (isSelected)
-                                                Brush.linearGradient(
-                                                    colors = listOf(
-                                                        GlassTheme.accentPrimary.copy(alpha = 0.4f),
-                                                        GlassTheme.accentSecondary.copy(alpha = 0.2f)
-                                                    )
-                                                )
-                                            else
-                                                Brush.linearGradient(
-                                                    colors = listOf(
-                                                        Color.White.copy(alpha = 0.1f),
-                                                        Color.White.copy(alpha = 0.05f)
-                                                    )
-                                                ),
-                                            RoundedCornerShape(18.dp)
-                                        )
-                                    .clickable {
-                                        val selectedId = convo.id
-                                        showChatsSheet = false
-                                        // Delay selection to let sheet close smoothly first
-                                        coroutineScope.launch {
-                                            delay(200)
-                                            viewModel.selectConversation(selectedId)
-                                        }
-                                    }
-                                        .padding(16.dp)
-                        ) {
-                            Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                        // Chat avatar
-                                        Box(
-                                            modifier = Modifier
-                                                .size(46.dp)
-                                                .clip(RoundedCornerShape(13.dp))
-                                                .background(
-                                                    if (isSelected)
-                                                        Brush.linearGradient(
-                                                            colors = listOf(
-                                                                GlassTheme.accentPrimary.copy(alpha = 0.25f),
-                                                                GlassTheme.accentSecondary.copy(alpha = 0.15f)
-                                                            )
-                                                        )
-                                                    else
-                                                        Brush.linearGradient(
-                                                            colors = listOf(
-                                                                Color.White.copy(alpha = 0.08f),
-                                                                Color.White.copy(alpha = 0.04f)
-                                                            )
-                                                        )
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(text = "🫐", fontSize = 22.sp)
-                                        }
-                                        
-                                        Spacer(Modifier.width(14.dp))
-                                        
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                                text = convo.title.ifEmpty { "Новый диалог" },
-                                        style = MaterialTheme.typography.bodyLarge,
-                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                                color = Color.White.copy(alpha = if (isSelected) 1f else 0.9f),
-                                        maxLines = 1
-                                    )
-                                            Spacer(Modifier.height(4.dp))
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(6.dp)
-                                                        .clip(CircleShape)
-                                                        .background(
-                                                            if (isSelected) GlassTheme.accentPrimary
-                                                            else Color.White.copy(alpha = 0.3f)
-                                                        )
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                    Text(
-                                                    text = dateFormat.format(Date(convo.updatedAt)),
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    color = Color.White.copy(alpha = 0.5f)
-                                    )
+
+                            // Автозакрытие при пустом списке
+                            LaunchedEffect(conversations.isEmpty()) {
+                                if (conversations.isEmpty()) {
+                                    showChatsSheet = false
                                 }
-                                        }
-                                        
-                                        // Actions
-                                        if (isSelected) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(GlassTheme.accentPrimary.copy(alpha = 0.2f)),
-                                                contentAlignment = Alignment.Center
+                            }
+                            
+                            if (conversations.isNotEmpty()) {
+                                var currentRevealedSessionId by remember { mutableStateOf<String?>(null) }
+                                
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    contentPadding = PaddingValues(bottom = 16.dp)
+                                ) {
+                                    items(conversations.size, key = { conversations[it].id }) { index ->
+                                        val convo = conversations[index]
+                                        Box(modifier = Modifier.animateItemPlacement(
+                                            animationSpec = spring(
+                                                dampingRatio = 0.7f,
+                                                stiffness = 400f
+                                            )
+                                        )) {
+                                            SwipeableSessionItem(
+                                                itemId = convo.id,
+                                                currentRevealedId = currentRevealedSessionId,
+                                                onReveal = { currentRevealedSessionId = it },
+                                                onDelete = { viewModel.deleteConversation(convo.id) }
                                             ) {
-                                    Icon(
-                                                    Icons.Default.Check,
-                                                    contentDescription = null,
-                                                    tint = GlassTheme.accentPrimary,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color.White.copy(alpha = 0.05f))
-                                                    .clickable { viewModel.deleteConversation(convo.id) },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                    Icon(
-                                                    Icons.Default.Close,
-                                                    contentDescription = "Удалить",
-                                                    tint = Color.White.copy(alpha = 0.4f),
-                                                    modifier = Modifier.size(16.dp)
+                                                SimpleSessionCard(
+                                                    convo = convo,
+                                                    isSelected = convo.id == currentConversationId,
+                                                    onClick = {
+                                                        if (currentRevealedSessionId != null) {
+                                                            currentRevealedSessionId = null
+                                                        } else {
+                                                            android.util.Log.d("SESSION_CLICK", "🔄 Selecting: ${convo.id}")
+                                                            showChatsSheet = false
+                                                            viewModel.selectConversation(convo.id)
+                                                        }
+                                                    }
                                                 )
                                             }
                                         }
@@ -598,76 +426,52 @@ fun ChatScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Compact header с кнопкой сессий
+            // Компактный header — только анимированная иконка сессий с бейджиком
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Session selector button
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(GlassColors.surface.copy(alpha = 0.6f))
-                        .border(1.dp, GlassColors.whiteOverlay10, RoundedCornerShape(20.dp))
-                        .clickable { showChatsSheet = true }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Панель кнопок — показываем только если есть сессии
+                AnimatedVisibility(
+                    visible = conversations.isNotEmpty(),
+                    enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                    exit = fadeOut() + scaleOut(targetScale = 0.8f)
                 ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = "Чаты",
-                        tint = GlassColors.accent,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Чаты",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = GlassColors.textPrimary,
-                        fontWeight = FontWeight.Medium
-                    )
-                    if (conversations.isNotEmpty()) {
-                        Spacer(Modifier.width(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Session selector
+                        SessionsIconWithBadge(
+                            sessionCount = conversations.size,
+                            onClick = { showChatsSheet = true }
+                        )
+                        
+                        // New chat button
                         Box(
                             modifier = Modifier
-                                .size(18.dp)
-                                .background(GlassColors.accent, CircleShape),
+                                .size(29.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(GlassColors.accent, GlassColors.accentSecondary)
+                                    )
+                                )
+                                .clickable { viewModel.createNewConversation() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = if (conversations.size > 9) "9+" else conversations.size.toString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 10.sp,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Новый чат",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
-                }
-                
-                // New chat button
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(GlassColors.accent, GlassColors.accentSecondary)
-                            )
-                        )
-                        .clickable { viewModel.createNewConversation() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Новый чат",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
             }
             
@@ -699,13 +503,26 @@ fun ChatScreen(
                 val lastUserMsg = lastUserMessage?.content?.lowercase() ?: ""
                 val lastUserHadImage = !lastUserMessage?.images.isNullOrEmpty() // Image-to-Image!
                 
-                // Ключевые слова для генерации изображений
-                val isTextToImageRequest = lastUserMsg.contains("сгенерируй") ||
-                                           lastUserMsg.contains("нарисуй") ||
-                                           lastUserMsg.contains("создай картинку") ||
-                                           lastUserMsg.contains("создай изображение") ||
-                                           lastUserMsg.contains("generate") ||
-                                           lastUserMsg.contains("draw")
+                // Ключевые слова для генерации изображений — расширенный список!
+                val isTextToImageRequest = lastUserMsg.contains("сгенерируй", ignoreCase = true) ||
+                                           lastUserMsg.contains("генерируй", ignoreCase = true) ||
+                                           lastUserMsg.contains("сгенерир", ignoreCase = true) ||
+                                           lastUserMsg.contains("генерир", ignoreCase = true) ||
+                                           lastUserMsg.contains("нарисуй", ignoreCase = true) ||
+                                           lastUserMsg.contains("рисуй", ignoreCase = true) ||
+                                           lastUserMsg.contains("изобрази", ignoreCase = true) ||
+                                           lastUserMsg.contains("покажи картин", ignoreCase = true) ||
+                                           lastUserMsg.contains("покажи изображ", ignoreCase = true) ||
+                                           lastUserMsg.contains("создай картин", ignoreCase = true) ||
+                                           lastUserMsg.contains("создай изображ", ignoreCase = true) ||
+                                           lastUserMsg.contains("создай фото", ignoreCase = true) ||
+                                           lastUserMsg.contains("сделай картин", ignoreCase = true) ||
+                                           lastUserMsg.contains("сделай изображ", ignoreCase = true) ||
+                                           lastUserMsg.contains("визуализируй", ignoreCase = true) ||
+                                           lastUserMsg.contains("generate", ignoreCase = true) ||
+                                           lastUserMsg.contains("draw", ignoreCase = true) ||
+                                           lastUserMsg.contains("image", ignoreCase = true) ||
+                                           lastUserMsg.contains("picture", ignoreCase = true)
                 
                 // Ключевые слова для Image-to-Image (редактирование)
                 val isEditKeyword = lastUserMsg.contains("сделай") ||
@@ -769,8 +586,8 @@ fun ChatScreen(
                                     .background(
                                         Brush.linearGradient(
                                             colors = listOf(
-                                                Color(0xFF6366F1),
-                                                Color(0xFF8B5CF6)
+                                                GlassColors.accent,
+                                                GlassColors.accentSecondary
                                             )
                                         ),
                                         CircleShape
@@ -800,13 +617,25 @@ fun ChatScreen(
                     }
                 }
                 
-                // Loading indicator - only show when NOT generating image
-                if ((isLoading || isUploading) && !isGeneratingImage) {
-                    item { 
-                        TypingIndicatorV2(
-                            modifier = Modifier.padding(vertical = GlassSpacing.betweenBubbleGroups),
-                            isUploading = isUploading
-                        )
+                // SSE Status Indicator - показывает текущий статус обработки
+                // Показываем только когда НЕ генерируется картинка (у картинок своя анимация)
+                if ((isLoading || isUploading || streamStatus.isNotEmpty()) && !isGeneratingImage) {
+                    item(key = "sse_status_indicator") { 
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = GlassSpacing.betweenBubbleGroups),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            // Используем SSE статус или дефолтный
+                            val displayStatus = when {
+                                isUploading -> "uploading"
+                                streamStatus.isNotEmpty() -> streamStatus
+                                isLoading -> "thinking"
+                                else -> "thinking"
+                            }
+                            SSEStatusIndicator(status = displayStatus)
+                        }
                     }
                 }
 
@@ -1249,11 +1078,11 @@ fun ChatScreen(
                         listState.animateScrollToItem(0)
                     }
                 },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = GlassColors.accent,
+                contentColor = GlassColors.textPrimary,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 100.dp)
+                    .padding(end = GlassSpacing.screenEdge, bottom = 100.dp)
             ) {
                 Icon(Icons.Default.KeyboardArrowDown, "Вниз")
             }
@@ -1321,40 +1150,7 @@ private fun AttachButton(
     }
 }
 
-@Composable
-private fun AttachOptionV2(
-    icon: androidx.compose.ui.graphics.vector.ImageVector, 
-    label: String, 
-    color: Color, 
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(52.dp)
-                .clip(GlassShapes.medium)
-                .background(color.copy(alpha = 0.15f))
-                .border(1.dp, color.copy(alpha = 0.3f), GlassShapes.medium)
-                .clickable { onClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon, 
-                contentDescription = label, 
-                tint = color, 
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = label, 
-            style = GlassTypography.labelSmall
-        )
-    }
-}
+// AttachOptionV2 удалён — не используется
 
 @Composable
 private fun ChatEmptyState() {
@@ -1469,7 +1265,7 @@ private fun ChatEmptyState() {
                             .offset(y = 4.dp)
                             .size((3 + index % 3).dp)
                             .background(
-                                GlassTheme.accentPrimary.copy(alpha = dotPulse * 0.8f),
+                                GlassColors.accent.copy(alpha = dotPulse * 0.8f),
                                 CircleShape
                             )
                     )
@@ -1486,10 +1282,10 @@ private fun ChatEmptyState() {
                     1.dp,
                     Brush.sweepGradient(
                         colors = listOf(
-                            Color(0xFF6366F1).copy(alpha = 0.4f),
-                            Color(0xFF8B5CF6).copy(alpha = 0.1f),
+                            GlassColors.accent.copy(alpha = 0.4f),
+                            GlassColors.accentSecondary.copy(alpha = 0.1f),
                             Color(0xFFA855F7).copy(alpha = 0.4f),
-                            Color(0xFF6366F1).copy(alpha = 0.1f)
+                            GlassColors.accent.copy(alpha = 0.1f)
                         )
                     ),
                     CircleShape
@@ -1504,8 +1300,8 @@ private fun ChatEmptyState() {
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF6366F1).copy(alpha = glowPulse),
-                            Color(0xFF8B5CF6).copy(alpha = glowPulse * 0.5f),
+                            GlassColors.accent.copy(alpha = glowPulse),
+                            GlassColors.accentSecondary.copy(alpha = glowPulse * 0.5f),
                             Color.Transparent
                         )
                     ),
@@ -1522,9 +1318,9 @@ private fun ChatEmptyState() {
                     .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
-                            Color(0xFF6366F1),  // Indigo
-                            Color(0xFF8B5CF6),  // Purple  
-                            Color(0xFF4F46E5)   // Deep indigo
+                            GlassColors.accent,  // Indigo
+                            GlassColors.accentSecondary,  // Purple  
+                            GlassColors.accent.copy(alpha = 0.9f)   // Deep indigo
                         )
                     )
                 )
@@ -1599,216 +1395,7 @@ private fun ChatEmptyState() {
     }
 }
 
-@Composable
-private fun ChatBubble(
-    message: MessageDTO,
-    status: MessageSendStatus?,
-    showAvatar: Boolean,
-    modifier: Modifier = Modifier,
-    animate: Boolean = false,
-    onRetry: () -> Unit = {}
-) {
-    val isUser = message.role == "user"
-    val formattedText = remember(message.content) { formatMessageText(message.content) }
-
-    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start) {
-        if (!isUser) {
-            if (showAvatar) {
-                // Animated blueberry avatar
-                BlueberryAvatar()
-                Spacer(Modifier.width(8.dp))
-                ProviderDot(
-                    provider = message.provider,
-                    providerColor = message.provider_color,
-                    modelUsed = message.model_used
-                )
-                Spacer(Modifier.width(6.dp))
-            } else {
-                Spacer(Modifier.width(50.dp)) // Space for missing avatar
-            }
-        }
-
-        Column(horizontalAlignment = if (isUser) Alignment.End else Alignment.Start, modifier = Modifier.widthIn(max = 340.dp)) {
-            // Show agent name label (but not for streaming or standard chat)
-            if (!isUser && message.agent_name != null && message.agent_name != "chat" && message.agent_name != "offline" && message.agent_name != "streaming") {
-                Text(message.agent_name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium, modifier = Modifier.padding(bottom = 4.dp))
-            }
-            
-            // User attached images (Image-to-Image) - миниатюры
-            if (isUser && !message.images.isNullOrEmpty()) {
-                message.images.forEach { imageUriString ->
-                    // Парсим URI из строки
-                    val parsedUri = try { 
-                        Uri.parse(imageUriString) 
-                    } catch (e: Exception) { 
-                        null 
-                    }
-                    
-                    if (parsedUri != null) {
-                        Box(
-                            modifier = Modifier
-                                .padding(bottom = 8.dp)
-                                .size(100.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(GlassColors.surface.copy(alpha = 0.3f))
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(parsedUri)
-                                    .crossfade(true)
-                                    .memoryCacheKey(imageUriString)
-                                    .diskCacheKey(imageUriString)
-                                    .build(),
-                                contentDescription = "Прикреплённое фото",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                onError = { 
-                                    android.util.Log.e("IMAGE_LOAD", "Failed to load: $imageUriString")
-                                }
-                            )
-                            // Edit icon badge
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(4.dp)
-                                    .size(20.dp)
-                                    .background(GlassTheme.accentPrimary.copy(alpha = 0.8f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Glassmorphism message bubble
-            Box(
-                modifier = Modifier
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 20.dp, 
-                            topEnd = 20.dp, 
-                            bottomStart = if (isUser) 20.dp else 4.dp, 
-                            bottomEnd = if (isUser) 4.dp else 20.dp
-                        )
-                    )
-                    .background(
-                        if (isUser) 
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    GlassTheme.accentPrimary,
-                                    GlassTheme.accentPrimary.copy(alpha = 0.8f)
-                                )
-                            )
-                        else 
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.1f),
-                                    Color.White.copy(alpha = 0.05f)
-                                )
-                            )
-                    )
-            ) {
-                if (isUser) {
-                Text(
-                    formattedText,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    style = MaterialTheme.typography.bodySmall.copy(lineHeight = 20.sp),
-                        color = Color.White
-                    )
-                } else {
-                    TypewriterText(
-                        fullText = formattedText,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = GlassTheme.textPrimary,
-                        animationEnabled = animate
-                )
-                }
-            }
-
-            if (isUser && status == MessageSendStatus.Failed) {
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Не отправлено",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = onRetry, contentPadding = PaddingValues(0.dp)) {
-                        Text("Повторить", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
-        }
-
-        if (isUser) {
-            if (showAvatar) {
-                Spacer(Modifier.width(8.dp))
-                Box(modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(GlassTheme.accentPrimary), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-            } else {
-                Spacer(Modifier.width(44.dp)) // Space for missing avatar
-            }
-        }
-    }
-}
-
-/**
- * Typewriter animation for chat messages
- */
-@Composable
-private fun TypewriterText(
-    fullText: String,
-    modifier: Modifier = Modifier,
-    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodySmall,
-    color: Color = GlassTheme.textPrimary,
-    animationEnabled: Boolean = true
-) {
-    val composeTime = remember { System.currentTimeMillis() }
-    android.util.Log.d("STREAM_DIAG", "🎨 COMPOSE @${System.currentTimeMillis()} fullText.len=${fullText.length}, animate=$animationEnabled, created@$composeTime")
-    
-    // Track visible chars - starts at 0, never resets
-    var visibleChars by remember { mutableStateOf(0) }
-    
-    // Single animation loop that keeps running
-    LaunchedEffect(Unit) {
-        android.util.Log.d("STREAM_DIAG", "🚀 ANIM START @${System.currentTimeMillis()}")
-        while (true) {
-            delay(25)
-            visibleChars++
-        }
-    }
-    
-    val displayText = if (animationEnabled && visibleChars < fullText.length) {
-        fullText.take(visibleChars)
-    } else {
-        fullText
-    }
-    
-    // Log only when something interesting happens
-    if (visibleChars <= 5 || visibleChars == fullText.length) {
-        android.util.Log.d("STREAM_DIAG", "📝 RENDER visible=$visibleChars, fullLen=${fullText.length}, showing=${displayText.length}")
-    }
-    
-    Text(
-        text = displayText,
-        modifier = modifier,
-        style = style.copy(lineHeight = 20.sp),
-        color = color
-    )
-}
+// ChatBubble и TypewriterText удалены — используется ChatBubbleV2
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1935,6 +1522,87 @@ private fun getVibrator(context: Context): Vibrator? {
     }
 }
 
+/**
+ * Компактная кнопка сессий — 29dp как кнопка плюса
+ * Мягкая анимация, без квадратного фона
+ */
+@Composable
+private fun SessionsIconWithBadge(
+    sessionCount: Int,
+    onClick: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "sessions")
+    
+    // Мягкая медленная пульсация
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+    
+    Box(contentAlignment = Alignment.Center) {
+        // Основной круг — 29dp как кнопка плюса
+        Box(
+            modifier = Modifier
+                .size(29.dp)
+                .scale(pulse)
+                .clip(CircleShape)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(GlassColors.accent, GlassColors.accentSecondary)
+                    )
+                )
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null // Без ripple эффекта!
+                ) { onClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            // Три линии — hamburger menu
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .width(if (it == 1) 9.dp else 11.dp)
+                            .height(1.5.dp)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(Color.White)
+                    )
+                }
+            }
+        }
+        
+        // Бейджик — справа сверху
+        if (sessionCount > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-4).dp)
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(GlassColors.mint)
+                    .border(1.dp, GlassColors.background, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (sessionCount > 9) "+" else sessionCount.toString(),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    lineHeight = 8.sp
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun BlueberryAvatar(size: Dp = 36.dp) {
     val infiniteTransition = rememberInfiniteTransition(label = "blueberry_avatar")
@@ -1970,8 +1638,8 @@ private fun BlueberryAvatar(size: Dp = 36.dp) {
                 .background(
                 Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF6366F1),
-                        Color(0xFF8B5CF6)
+                        GlassColors.accent,
+                        GlassColors.accentSecondary
                     )
                 )
                 ),
@@ -1984,80 +1652,7 @@ private fun BlueberryAvatar(size: Dp = 36.dp) {
     }
 }
 
-@Composable
-private fun TypingIndicator(isUploading: Boolean, streamStatus: String = "") {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Avatar
-            if (isUploading) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(listOf(GlassTheme.accentPrimary, GlassTheme.accentSecondary))
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.CloudUpload, null, tint = Color.White, modifier = Modifier.size(12.dp))
-            }
-            } else {
-            BlueberryAvatar(size = 24.dp)
-        }
-
-        Spacer(Modifier.width(6.dp))
-
-        // Compact glass bubble with dots
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp, 12.dp, 12.dp, 4.dp))
-                .background(Color.White.copy(alpha = 0.1f))
-                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp, 12.dp, 12.dp, 4.dp))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), 
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isUploading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(10.dp), 
-                        strokeWidth = 1.5.dp, 
-                        color = GlassTheme.accentPrimary
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        "Загрузка", 
-                        style = MaterialTheme.typography.labelSmall, 
-                        color = GlassTheme.textSecondary
-                    )
-                } else {
-                    // Animated dots only
-                    val transition = rememberInfiniteTransition(label = "dots")
-                    repeat(3) { index ->
-                        val alpha by transition.animateFloat(
-                            0.3f, 1f, 
-                            infiniteRepeatable(
-                                tween(400, delayMillis = index * 120), 
-                                RepeatMode.Reverse
-                            ), 
-                            label = "dot_alpha_$index"
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(5.dp)
-                            .clip(CircleShape)
-                                .background(GlassTheme.accentPrimary.copy(alpha = alpha))
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+// TypingIndicator удалён — используется SSEStatusIndicator
 
 @Composable
 private fun ChatSkeletonBubble() {
@@ -2121,8 +1716,269 @@ private fun formatMessageText(raw: String): String {
     val multiBlank = Pattern.compile("(\\n\\s*){3,}")
     text = multiBlank.matcher(text).replaceAll("\n\n")
 
-    // Clean excessive asterisks/underscores used for markdown emphasis
-    text = text.replace("*", "").replace("_", "")
+    // Clean ONLY markdown bold/italic patterns, NOT single asterisks in emojis
+    // **bold** → bold, __underline__ → underline
+    text = text.replace(Regex("\\*\\*(.+?)\\*\\*"), "$1")  // **bold**
+    text = text.replace(Regex("__(.+?)__"), "$1")          // __underline__
+    // Не трогаем одиночные * и _ — они могут быть частью эмодзи
 
     return text.trim()
+}
+
+/**
+ * Simple Session Card — единый фиолетовый стиль
+ */
+@Composable
+private fun SimpleSessionCard(
+    convo: com.health.companion.data.local.database.ConversationEntity,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val dateFormat = remember { SimpleDateFormat("dd.MM HH:mm", Locale("ru")) }
+    val purpleColor = GlassColors.accentSecondary
+    
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (isSelected) purpleColor.copy(alpha = 0.15f)
+                else Color.White.copy(alpha = 0.05f)
+            )
+            .border(
+                width = 1.dp,
+                color = if (isSelected) purpleColor.copy(alpha = 0.5f)
+                        else purpleColor.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Фиолетовая точка
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(purpleColor)
+            )
+            
+            Spacer(Modifier.width(12.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = convo.title.ifEmpty { "Новый диалог" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    Spacer(Modifier.width(8.dp))
+                    
+                    // Время последнего сообщения (updatedAt)
+                    Text(
+                        text = dateFormat.format(Date(convo.updatedAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = purpleColor.copy(alpha = 0.7f),
+                        fontSize = 10.sp
+                    )
+                }
+                
+                Spacer(Modifier.height(2.dp))
+                
+                Text(
+                    text = convo.summary?.take(40) ?: "Нажми чтобы продолжить…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.45f),
+                    maxLines = 1,
+                    fontSize = 11.sp
+                )
+            }
+            // Убрана галочка — она смещала дату
+        }
+    }
+}
+
+/**
+ * Swipeable wrapper for session cards — swipe left to delete (120Hz smooth)
+ * With Telegram-style deletion animation: fade out + shrink + slide up
+ */
+@Composable
+private fun SwipeableSessionItem(
+    itemId: String,
+    currentRevealedId: String?,
+    onReveal: (String?) -> Unit,
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val offsetX = remember { Animatable(0f) }
+    val deleteButtonWidth = 60.dp
+    val density = LocalDensity.current
+    val deleteButtonWidthPx = with(density) { deleteButtonWidth.toPx() }
+    
+    var isRevealed by remember { mutableStateOf(false) }
+    var itemHeight by remember { mutableStateOf(0) }
+    
+    // 🎬 Анимация удаления как в Telegram
+    var isDeleting by remember { mutableStateOf(false) }
+    val deleteAlpha = remember { Animatable(1f) }
+    val deleteScale = remember { Animatable(1f) }
+    val deleteHeight = remember { Animatable(1f) }
+    
+    val gap = 6.dp
+    val gapPx = with(density) { gap.toPx() }
+    val totalSwipeDistance = deleteButtonWidthPx + gapPx
+    
+    // Закрыть если другой элемент раскрыт
+    LaunchedEffect(currentRevealedId) {
+        if (currentRevealedId != itemId && isRevealed) {
+            offsetX.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
+            isRevealed = false
+        }
+    }
+    
+    // Прямой расчёт прогресса без доп. анимации - мгновенная реакция!
+    val revealProgress = (-offsetX.value / totalSwipeDistance).coerceIn(0f, 1f)
+    
+    // Если удаление завершено - не показываем
+    if (deleteAlpha.value <= 0.01f) return
+    
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                // Анимация удаления - GPU accelerated
+                alpha = deleteAlpha.value
+                scaleX = deleteScale.value
+                scaleY = deleteScale.value
+            }
+            .then(
+                if (isDeleting) {
+                    Modifier.height(with(density) { (itemHeight * deleteHeight.value).toDp() })
+                } else Modifier
+            )
+    ) {
+        // Кнопка удаления - GPU-accelerated через graphicsLayer
+        if (revealProgress > 0.01f && !isDeleting) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(deleteButtonWidth)
+                    .height(with(density) { (itemHeight - 4).toDp() })
+                    .graphicsLayer { 
+                        // Всё через graphicsLayer для 120Hz
+                        alpha = revealProgress
+                        scaleX = 0.85f + (revealProgress * 0.15f)
+                        scaleY = 0.85f + (revealProgress * 0.15f)
+                    }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFFE53935),
+                                Color(0xFFD32F2F)
+                            )
+                        )
+                    )
+                    .clickable {
+                        if (isDeleting) return@clickable
+                        isDeleting = true
+                        
+                        // 🎬 Плавная анимация удаления
+                        coroutineScope.launch {
+                            // Параллельные анимации для плавности
+                            launch { 
+                                deleteAlpha.animateTo(0f, tween(250, easing = FastOutSlowInEasing)) 
+                            }
+                            launch { 
+                                deleteScale.animateTo(0.8f, tween(250, easing = FastOutSlowInEasing)) 
+                            }
+                            launch { 
+                                deleteHeight.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) 
+                            }
+                            
+                            // Ждём завершения самой длинной анимации
+                            kotlinx.coroutines.delay(300)
+                            
+                            // Теперь удаляем
+                            onDelete()
+                            onReveal(null)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "Удалить",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+        
+        // Основной контент - GPU-accelerated
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { if (!isDeleting) itemHeight = it.height }
+                .graphicsLayer { 
+                    // GPU-ускорение для 120Hz
+                    translationX = offsetX.value
+                }
+                .pointerInput(isDeleting) {
+                    if (isDeleting) return@pointerInput
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            coroutineScope.launch {
+                                if (offsetX.value < -totalSwipeDistance / 2) {
+                                    // Открыть
+                                    offsetX.animateTo(
+                                        -totalSwipeDistance, 
+                                        spring(dampingRatio = 0.7f, stiffness = 500f)
+                                    )
+                                    isRevealed = true
+                                    onReveal(itemId)
+                                } else {
+                                    // Закрыть - быстро!
+                                    offsetX.animateTo(
+                                        0f, 
+                                        tween(120, easing = FastOutSlowInEasing)
+                                    )
+                                    isRevealed = false
+                                    if (currentRevealedId == itemId) onReveal(null)
+                                }
+                            }
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            coroutineScope.launch {
+                                val newOffset = (offsetX.value + dragAmount).coerceIn(-totalSwipeDistance * 1.1f, 0f)
+                                offsetX.snapTo(newOffset)
+                            }
+                        }
+                    )
+                }
+        ) {
+            content()
+        }
+    }
 }

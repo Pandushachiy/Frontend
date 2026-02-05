@@ -143,6 +143,7 @@ class ChatViewModel @Inject constructor(
             _currentConversationId.collect { convId ->
                 // Cancel previous collection
                 currentJob?.cancel()
+                android.util.Log.d("CHAT_LOAD", "🔄 ConversationId changed to: $convId, streaming=${_isStreaming.value}")
                 
                 if (convId != null) {
                     // Load session attachments for this conversation
@@ -150,27 +151,38 @@ class ChatViewModel @Inject constructor(
                     
                     // Start new collection for this conversation
                     currentJob = viewModelScope.launch {
-                    chatRepository.getConversationMessages(convId)
-                .catch { e -> Timber.e(e, "Failed to load messages") }
-                .collect { messagesList ->
-                                // Only update if this is still the current conversation
-                                // AND not during streaming
-                                // AND Room has at least as many messages as memory (don't lose messages)
-                                if (_currentConversationId.value == convId && !_isStreaming.value) {
-                                    val currentMessages = _messages.value
-                                    // Only update from Room if it has more/equal messages
-                                    // This prevents overwriting in-memory messages before Room sync completes
-                                    if (messagesList.size >= currentMessages.size || currentMessages.isEmpty()) {
-                    _messages.value = messagesList
-                }
+                        chatRepository.getConversationMessages(convId)
+                            .catch { e -> 
+                                android.util.Log.e("CHAT_LOAD", "❌ Flow error: ${e.message}")
+                                Timber.e(e, "Failed to load messages") 
+                            }
+                            .collect { messagesList ->
+                                android.util.Log.d("CHAT_LOAD", "📦 Room: ${messagesList.size} msgs, streaming=${_isStreaming.value}, current=${_messages.value.size}")
+                                
+                                // Проверяем что это всё ещё текущая сессия
+                                if (_currentConversationId.value == convId) {
+                                    // Во время стриминга НЕ перезаписываем - стрим сам управляет сообщениями
+                                    // Также не перезаписываем если Room пустой а в памяти есть сообщения (стрим ещё не сохранён)
+                                    val currentMsgs = _messages.value
+                                    if (_isStreaming.value) {
+                                        android.util.Log.d("CHAT_LOAD", "⏸️ Skip (streaming active)")
+                                    } else if (messagesList.isEmpty() && currentMsgs.isNotEmpty()) {
+                                        android.util.Log.d("CHAT_LOAD", "⏸️ Skip (Room empty, memory has ${currentMsgs.size})")
+                                    } else {
+                                        _messages.value = messagesList
+                                        android.util.Log.d("CHAT_LOAD", "✅ Updated to ${messagesList.size} msgs")
+                                    }
                                 }
                             }
                     }
                 } else {
-                    // Clear attachments when no conversation
+                    // Новый чат - очищаем только если НЕ стримим
+                    if (!_isStreaming.value) {
+                        _messages.value = emptyList()
+                        android.util.Log.d("CHAT_LOAD", "🗑️ Cleared (new chat)")
+                    }
                     attachmentsRepository.clearAttachments()
                 }
-                // Don't clear messages when convId is null - keep showing previous
             }
         }
     }
@@ -188,15 +200,29 @@ class ChatViewModel @Inject constructor(
                 .catch { e -> Timber.e(e, "Failed to observe conversations") }
                 .collect { list ->
                     _conversations.value = list
-                    // Don't auto-select - let user choose or start new chat
+                    // Авто-выбор последней сессии при первом запуске
+                    if (_currentConversationId.value == null && list.isNotEmpty()) {
+                        val lastConv = list.maxByOrNull { it.updatedAt }
+                        lastConv?.let { 
+                            android.util.Log.d("AUTO_SELECT", "🎯 Auto-selecting last conversation: ${it.id}")
+                            selectConversation(it.id) 
+                        }
+                    }
                 }
         }
     }
 
     private fun loadRemoteConversations() {
         viewModelScope.launch {
+            android.util.Log.d("CONV_LOAD", "🔄 Loading remote conversations...")
             chatRepository.getConversations()
-                .onFailure { e -> Timber.e(e, "Failed to load remote conversations") }
+                .onSuccess { list -> 
+                    android.util.Log.d("CONV_LOAD", "✅ Loaded ${list.size} conversations from server")
+                }
+                .onFailure { e -> 
+                    android.util.Log.e("CONV_LOAD", "❌ Failed to load: ${e.message}")
+                    Timber.e(e, "Failed to load remote conversations") 
+                }
         }
     }
 
@@ -280,6 +306,9 @@ class ChatViewModel @Inject constructor(
                 )
                 _messages.value = _messages.value + userMessage
                 android.util.Log.d("CHAT_DEBUG", "Added user message with images: ${userMessage.images}")
+                
+                // Clear old Failed statuses when sending new message
+                _messageSendStatus.value = _messageSendStatus.value.filterValues { it != MessageSendStatus.Failed }
                 updateMessageStatus(userMessageId, MessageSendStatus.Sending)
                 _currentMessage.value = ""
 
@@ -376,16 +405,53 @@ class ChatViewModel @Inject constructor(
                         }
                     },
                     onDone = { messageId, content, newConversationId ->
+                        android.util.Log.d("SAVE_MSG", "🎯 onDone called! msgId=$messageId, contentLen=${content.length}, builderLen=${contentBuilder.length}, convId=$newConversationId")
                         val finalContent = content.ifEmpty { contentBuilder.toString() }
+                        android.util.Log.d("SAVE_MSG", "📝 finalContent len=${finalContent.length}, preview='${finalContent.take(50)}'")
                         
                         viewModelScope.launch(Dispatchers.Main) {
                             // Update conversation ID from server (this is the authoritative ID)
-                            if (newConversationId != null && newConversationId.isNotBlank()) {
+                            val isNewConversation = newConversationId != null && 
+                                newConversationId.isNotBlank() && 
+                                _currentConversationId.value != newConversationId
+                                
+                            val convId = if (newConversationId != null && newConversationId.isNotBlank()) {
                                 val oldId = _currentConversationId.value
                                 if (oldId != newConversationId) {
                                     Timber.d("Server assigned conversation_id: $newConversationId (was: $oldId)")
                                     _currentConversationId.value = newConversationId
                                     savedStateHandle["conversationId"] = newConversationId
+                                }
+                                newConversationId
+                            } else {
+                                _currentConversationId.value ?: UUID.randomUUID().toString()
+                            }
+                            
+                            // ✅ SAVE TO LOCAL DATABASE with accumulated content
+                            android.util.Log.d("SAVE_MSG", "⏳ Saving: convId=$convId, user='${text.take(30)}', assistant len=${finalContent.length}, img=$currentImageUrl")
+                            viewModelScope.launch(Dispatchers.IO) {
+                                chatRepository.saveStreamedMessages(
+                                    conversationId = convId,
+                                    userMessage = text,
+                                    assistantMessageId = messageId.ifEmpty { streamingMessageId },
+                                    assistantContent = finalContent,
+                                    imageUrl = currentImageUrl
+                                )
+                                android.util.Log.d("SAVE_MSG", "✅ Saved to Room: convId=$convId")
+                                
+                                // 🏷️ Auto-regenerate title for new conversations via LLM
+                                if (isNewConversation) {
+                                    try {
+                                        chatRepository.regenerateTitle(convId)
+                                            .onSuccess { newTitle ->
+                                                Timber.d("✅ Title auto-generated: $newTitle")
+                                            }
+                                            .onFailure { e ->
+                                                Timber.w(e, "Failed to regenerate title, using default")
+                                            }
+                                    } catch (e: Exception) {
+                                        Timber.w(e, "Title regeneration error")
+                                    }
                                 }
                             }
                             
@@ -419,9 +485,11 @@ class ChatViewModel @Inject constructor(
                         }
                         
                         viewModelScope.launch(Dispatchers.Main.immediate) {
-                            // Handle "Conversation not found" - retry without conversation_id
-                            if (errorMsg.contains("not found", ignoreCase = true) || errorMsg.contains("404")) {
-                                Timber.w("Conversation not found, clearing and retrying...")
+                            // Handle "Conversation not found" - retry without conversation_id (ONCE!)
+                            // Защита от бесконечного цикла: ретраим только если был conversation_id
+                            val hadConversationId = _currentConversationId.value != null
+                            if (hadConversationId && (errorMsg.contains("not found", ignoreCase = true) || errorMsg.contains("404"))) {
+                                Timber.w("Conversation not found, clearing and retrying ONCE...")
                                 // Clear stale conversation
                                 _currentConversationId.value?.let { staleId ->
                                     chatRepository.deleteLocalConversation(staleId)
@@ -435,7 +503,7 @@ class ChatViewModel @Inject constructor(
                                 _isStreaming.value = false
                                 _isLoading.value = false
                                 
-                                // Retry
+                                // Retry ONCE (hadConversationId was true, now it's null — won't retry again)
                                 sendMessage(text)
                                 return@launch
                             }
@@ -489,34 +557,61 @@ class ChatViewModel @Inject constructor(
     }
 
     fun createNewConversation() {
+        // Не создаём новый диалог пока идёт стриминг в текущем!
+        if (_isStreaming.value) {
+            Timber.w("Cannot create new conversation while streaming")
+            return
+        }
+        
         // Don't create conversation on backend yet - it will be created with first message
         // Just clear current state for new chat
-            _messages.value = emptyList()
-            _currentMessage.value = ""
+        _messages.value = emptyList()
+        _currentMessage.value = ""
         _currentConversationId.value = null
         savedStateHandle["conversationId"] = null
         _uiState.value = ChatUiState.Success
+        _streamStatus.value = ""
+        _isLoading.value = false
         Timber.d("New conversation started (will be created on first message)")
     }
 
     fun selectConversation(conversationId: String) {
-        if (_currentConversationId.value == conversationId) return
+        android.util.Log.d("SELECT_CONV", "🎯 selectConversation: $conversationId")
         
-        _uiState.value = ChatUiState.Success // Clear any errors
+        if (_currentConversationId.value == conversationId) {
+            android.util.Log.d("SELECT_CONV", "Same conversation, skipping")
+            return
+        }
         
-        // Update ID immediately - Flow will load messages smoothly
+        // 1. Сбрасываем состояние
+        _isStreaming.value = false
+        _streamStatus.value = ""
+        _isLoading.value = false
+        _uiState.value = ChatUiState.Success
+        
+        // 2. Очищаем сообщения СРАЗУ (чтобы не показывать старые)
+        _messages.value = emptyList()
+        android.util.Log.d("SELECT_CONV", "🗑️ Cleared old messages")
+        
+        // 3. Переключаем ID - это триггернёт observeCurrentConversationMessages
         _currentConversationId.value = conversationId
         savedStateHandle["conversationId"] = conversationId
+        android.util.Log.d("SELECT_CONV", "✅ Set conversationId: $conversationId")
         
-        // Sync from server in background (UI already updated via Flow)
+        // 4. Синхронизируем с сервером в фоне
         viewModelScope.launch {
+            android.util.Log.d("SELECT_CONV", "🔄 Syncing from server...")
             val result = chatRepository.syncConversationMessages(conversationId)
+            result.onSuccess { messages ->
+                android.util.Log.d("SELECT_CONV", "✅ Server sync: ${messages.size} messages")
+            }
             result.onFailure { e -> 
-                Timber.e(e, "Failed to sync messages for $conversationId")
+                android.util.Log.e("SELECT_CONV", "❌ Sync failed: ${e.message}")
                 if (e.message?.contains("404") == true || e.message?.contains("not found", ignoreCase = true) == true) {
+                    android.util.Log.w("SELECT_CONV", "⚠️ Session not found on server")
                     chatRepository.deleteLocalConversation(conversationId)
                     _currentConversationId.value = null
-                    _uiState.value = ChatUiState.Error("Сессия не найдена")
+                    _messages.value = emptyList()
                 }
             }
         }

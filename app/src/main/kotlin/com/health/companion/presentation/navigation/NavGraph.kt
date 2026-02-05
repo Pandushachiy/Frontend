@@ -284,6 +284,15 @@ fun NavGraph(
                         onMessageSent = {
                             // Обновить Dashboard после отправки сообщения
                             dashboardViewModel.onMessageSent()
+                        },
+                        onNavigate = { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
                     )
                 }

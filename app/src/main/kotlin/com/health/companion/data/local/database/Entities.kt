@@ -44,7 +44,8 @@ data class ChatMessageEntity(
     val modelUsed: String? = null,
     val tokensUsed: Int? = null,
     val processingTime: Int? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val imageUrl: String? = null  // URL сгенерированного AI изображения
 )
 
 @Entity(tableName = "health_metrics")

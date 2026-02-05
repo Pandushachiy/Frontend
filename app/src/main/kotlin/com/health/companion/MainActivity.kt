@@ -1,6 +1,10 @@
 package com.health.companion
 
+import android.os.Build
 import android.os.Bundle
+import android.view.Surface
+import android.view.View
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -9,7 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Surface as ComposeSurface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +34,52 @@ class MainActivity : ComponentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // ═══════════════════════════════════════════════════════════
+        // 🚀 120Hz + GPU ACCELERATION (MAXIMUM PERFORMANCE)
+        // ═══════════════════════════════════════════════════════════
+        
+        // 1. Force hardware acceleration on window level
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        )
+        
+        // 2. Enable hardware layers for all views (GPU rendering)
+        window.decorView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        
+        // 3. Request highest refresh rate (120Hz if available)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay
+            }
+            display?.let { d ->
+                val modes = d.supportedModes
+                val highestMode = modes.maxByOrNull { it.refreshRate }
+                highestMode?.let { mode ->
+                    window.attributes = window.attributes.apply {
+                        preferredDisplayModeId = mode.modeId
+                    }
+                    android.util.Log.d("PERF", "✅ Display: ${mode.refreshRate}Hz (mode ${mode.modeId})")
+                }
+            }
+        }
+        
+        // 4. Android 11+ - cutout mode for edge-to-edge
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+            android.util.Log.d("PERF", "✅ Edge-to-edge cutout mode enabled")
+        }
+        
+        // 5. Disable window animations for instant transitions
+        window.setWindowAnimations(0)
+        
+        // ═══════════════════════════════════════════════════════════
         
         // Enable edge-to-edge display
         enableEdgeToEdge()
@@ -58,7 +108,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
-                Surface(
+                ComposeSurface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {

@@ -1,11 +1,13 @@
 package com.health.companion.data.remote.api
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ChatApi {
     
@@ -16,7 +18,10 @@ interface ChatApi {
     suspend fun createConversation(@Body request: CreateConversationRequest = CreateConversationRequest()): ConversationDTO
 
     @GET("chat/conversations")
-    suspend fun getConversations(): ConversationsResponse
+    suspend fun getConversations(
+        @Query("size") size: Int = 100,  // Загружаем больше за раз
+        @Query("page") page: Int = 1
+    ): ConversationsResponse
     
     @GET("chat/conversations/{conversationId}/messages")
     suspend fun getMessages(@Path("conversationId") conversationId: String): List<MessageDTO>
@@ -29,7 +34,22 @@ interface ChatApi {
         @Path("conversationId") conversationId: String,
         @Path("messageId") messageId: String
     ): MessageDeleteResponse
+    
+    /**
+     * Регенерация названия сессии через LLM
+     * Использует анализ сообщений диалога для автоматического именования
+     */
+    @POST("chat/conversations/{conversationId}/regenerate-title")
+    suspend fun regenerateTitle(
+        @Path("conversationId") conversationId: String
+    ): RegenerateTitleResponse
 }
+
+@Serializable
+data class RegenerateTitleResponse(
+    val title: String,
+    val conversation_id: String? = null
+)
 
 @Serializable
 data class MessageDeleteResponse(
@@ -119,12 +139,13 @@ data class MessageMetadata(
 @Serializable
 data class ConversationDTO(
     val id: String,
-    val title: String,
-    val created_at: String,
+    val title: String = "",
+    val created_at: String? = null,  // Бэкенд может не возвращать
     val updated_at: String? = null,
     val is_archived: Boolean = false,
     val is_pinned: Boolean = false,
-    val summary: String? = null
+    val summary: String? = null,
+    val message_count: Int? = null  // Добавлено бэком
 )
 
 @Serializable
@@ -139,7 +160,8 @@ data class MessageDTO(
     val model_used: String? = null,
     val tokens_used: Int? = null,
     val processing_time: Int? = null,
-    val created_at: String,
+    val created_at: String? = null,  // Nullable — backend может не возвращать
+    @SerialName("image_url")
     val imageUrl: String? = null,  // URL сгенерированной картинки от AI
     val images: List<String>? = null  // Прикреплённые пользователем изображения (uri/base64)
 )
