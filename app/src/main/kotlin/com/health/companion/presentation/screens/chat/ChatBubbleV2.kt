@@ -206,7 +206,10 @@ fun ChatBubbleV2(
                 // Проверяем есть ли картинка (сгенерированная или загруженная)
                 val hasGeneratedImage = message.imageUrl != null
                 val hasUploadedImages = !message.images.isNullOrEmpty()
-                val hasText = message.content.isNotBlank()
+                // Скрываем текст-заглушку "[Изображение: ...]" если есть реальная картинка
+                val isImagePlaceholder = message.content.startsWith("[Изображение:") || 
+                                         message.content.startsWith("[Image:")
+                val hasText = message.content.isNotBlank() && !(hasGeneratedImage && isImagePlaceholder)
                 val context = LocalContext.current
                 
                 Column(modifier = Modifier.widthIn(max = maxBubbleWidth)) {
