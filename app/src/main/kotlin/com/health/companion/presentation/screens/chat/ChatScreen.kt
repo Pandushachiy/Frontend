@@ -1785,9 +1785,9 @@ private fun SimpleSessionCard(
                     
                     Spacer(Modifier.width(8.dp))
                     
-                    // Время последнего сообщения (updatedAt)
+                    // Время последнего сообщения
                     Text(
-                        text = dateFormat.format(Date(convo.updatedAt)),
+                        text = dateFormat.format(Date(convo.lastMessageAt ?: convo.updatedAt)),
                         style = MaterialTheme.typography.labelSmall,
                         color = purpleColor.copy(alpha = 0.7f),
                         fontSize = 10.sp
