@@ -140,13 +140,13 @@ data class MessageMetadata(
 data class ConversationDTO(
     val id: String,
     val title: String = "",
-    val created_at: String? = null,  // Бэкенд может не возвращать
-    val updated_at: String? = null,
-    val last_message_at: String? = null,  // Время последнего сообщения
-    val is_archived: Boolean = false,
-    val is_pinned: Boolean = false,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
+    val lastMessageAt: String? = null,  // Время последнего сообщения (camelCase от бэка)
+    val isArchived: Boolean = false,
+    val isPinned: Boolean = false,
     val summary: String? = null,
-    val message_count: Int? = null  // Добавлено бэком
+    val messageCount: Int? = null
 )
 
 @Serializable

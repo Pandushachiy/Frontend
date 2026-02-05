@@ -479,10 +479,10 @@ class ChatRepositoryImpl @Inject constructor(
             
             // Upsert server conversations
             allItems.forEach { dto ->
-                // Parse ISO datetime from backend (e.g. "2026-02-03T17:39:00Z")
-                val createdMs = dto.created_at?.let { parseIsoDateTime(it) } ?: now
-                val updatedMs = dto.updated_at?.let { parseIsoDateTime(it) } ?: createdMs
-                val lastMsgMs = dto.last_message_at?.let { parseIsoDateTime(it) }
+                // Parse ISO datetime from backend (camelCase)
+                val createdMs = dto.createdAt?.let { parseIsoDateTime(it) } ?: now
+                val updatedMs = dto.updatedAt?.let { parseIsoDateTime(it) } ?: createdMs
+                val lastMsgMs = dto.lastMessageAt?.let { parseIsoDateTime(it) }
                 
                 conversationDao.insert(
                     ConversationEntity(
@@ -491,8 +491,8 @@ class ChatRepositoryImpl @Inject constructor(
                         createdAt = createdMs,
                         updatedAt = updatedMs,
                         lastMessageAt = lastMsgMs ?: updatedMs,  // fallback к updatedAt
-                        isArchived = dto.is_archived,
-                        isPinned = dto.is_pinned,
+                        isArchived = dto.isArchived,
+                        isPinned = dto.isPinned,
                         summary = dto.summary
                     )
                 )
