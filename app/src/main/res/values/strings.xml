@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FairyBerry</string>
+    
+    <!-- Common -->
+    <string name="loading">Loading…</string>
+    <string name="error">Error</string>
+    <string name="retry">Retry</string>
+    <string name="cancel">Отмена</string>
+    <string name="ok">OK</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    
+    <!-- Auth -->
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="name">Name</string>
+    <string name="age">Age</string>
+    <string name="gender">Gender</string>
+    <string name="logout">Logout</string>
+    
+    <!-- Navigation -->
+    <string name="nav_chat">Chat</string>
+    <string name="nav_health">Health</string>
+    <string name="nav_documents">Documents</string>
+    <string name="nav_mood">Mood</string>
+    <string name="nav_settings">Settings</string>
+    
+    <!-- Chat -->
+    <string name="chat_title">FairyBerry</string>
+    <string name="chat_placeholder">Write a message…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_voice">Voice input</string>
+    
+    <!-- Health -->
+    <string name="health_dashboard">Health Dashboard</string>
+    <string name="health_insights">Insights</string>
+    <string name="health_metrics">Metrics</string>
+    
+    <!-- Mood -->
+    <string name="mood_title">How are you feeling?</string>
+    <string name="mood_level">Mood Level</string>
+    <string name="stress_level">Stress Level</string>
+    <string name="journal_entry">Journal Entry</string>
+    <string name="journal_placeholder">Write how you\'re feeling…</string>
+    <string name="save_entry">Save Entry</string>
+    
+    <!-- Documents -->
+    <string name="documents_title">My Documents</string>
+    <string name="upload_document">Upload Document</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="processing">Processing…</string>
+    
+    <!-- Permissions -->
+    <string name="permission_camera">Camera permission is needed to take photos of documents</string>
+    <string name="permission_microphone">Microphone permission is needed for voice input</string>
+    <string name="permission_denied">Permission denied</string>
+
+    <!-- Notification actions -->
+    <string name="action_done">✅ Выполнено</string>
+    <string name="action_snooze_30">⏰ +30 мин</string>
+
+    <!-- Notification group -->
+    <string name="reminders_group_title">Напоминания</string>
+
+    <!-- Snooze confirmation messages -->
+    <string name="snooze_confirm_minutes">Отложено на %1$d мин</string>
+    <string name="snooze_confirm_1hour">Отложено на 1 час</string>
+    <string name="snooze_confirm_hours">Отложено на %1$d ч</string>
+
+    <!-- Login -->
+    <string name="login_subtitle">Твой магический помощник</string>
+    <string name="login_welcome_back">С возвращением!</string>
+    <string name="login_sign_in_prompt">Войди в свой аккаунт</string>
+    <string name="password_placeholder">Пароль</string>
+    <string name="forgot_password">Забыли пароль?</string>
+    <string name="sign_in">Войти</string>
+    <string name="no_account">Нет аккаунта?</string>
+    <string name="create_account_link">Создать</string>
+    <string name="reset_password_title">Сброс пароля</string>
+    <string name="reset_password_message">Напишите в поддержку — мы поможем восстановить доступ к аккаунту.</string>
+    <string name="understood">Понятно</string>
+
+    <!-- Register -->
+    <string name="back">Назад</string>
+    <string name="create_account">Создать аккаунт</string>
+    <string name="join_feyberry">Присоединяйся к FairyBerry</string>
+    <string name="name_placeholder">Имя</string>
+    <string name="min_2_chars">Минимум 2 символа</string>
+    <string name="min_6_chars">Минимум 6 символов</string>
+    <string name="confirm_password_placeholder">Подтвердите пароль</string>
+    <string name="passwords_dont_match">Пароли не совпадают</string>
+    <string name="already_have_account">Уже есть аккаунт?</string>
+
+    <!-- Change Password -->
+    <string name="change_password_title">Смена пароля</string>
+    <string name="create_strong_password">Создайте надёжный пароль</string>
+    <string name="current_password">Текущий пароль</string>
+    <string name="new_password">Новый пароль</string>
+    <string name="confirm_new_password">Подтвердите новый пароль</string>
+    <string name="password_requirements">Минимум 6 символов. Используй буквы, цифры и спецсимволы.</string>
+    <string name="password_changed_success">Пароль успешно изменён!</string>
+    <string name="change_password_button">Сменить пароль</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Профиль</string>
+    <string name="edit_profile">Редактировать профиль</string>
+    <string name="edit_profile_subtitle">Имя, интересы, контекст для AI</string>
+    <string name="sign_out">Выйти из аккаунта</string>
+    <string name="delete_all_data">Удалить все данные</string>
+    <string name="delete_all_data_title">Удалить все данные?</string>
+    <string name="delete_all_data_message">Будут удалены все факты, диалоги, документы, файлы, канвас и история. Аккаунт останется — можно войти снова.\n\nЭто действие необратимо.</string>
+    <string name="delete_all">Удалить всё</string>
+    <string name="profile_section_basic">Основное</string>
+    <string name="profile_section_medcard">Медкарта</string>
+    <string name="profile_field_name">Имя</string>
+    <string name="profile_field_nickname">Ник</string>
+    <string name="profile_field_age">Возраст</string>
+    <string name="profile_field_language">Язык</string>
+    <string name="profile_field_height">Рост, см</string>
+    <string name="profile_field_weight">Вес, кг</string>
+    <string name="profile_field_allergies">Аллергии</string>
+    <string name="profile_field_diseases">Заболевания</string>
+    <string name="profile_comma_hint">через запятую</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Настройки</string>
+    <string name="default_avatar_letter">П</string>
+    <string name="default_user_name">Пользователь</string>
+    <string name="ai_skills">Навыки AI</string>
+    <string name="ai_skills_subtitle">Telegram, код, инструменты</string>
+    <string name="appearance">Внешний вид</string>
+    <string name="change_password_subtitle">Обновить пароль аккаунта</string>
+    <string name="auto_send">Автоотправка</string>
+    <string name="auto_send_subtitle">Отправлять сразу после распознавания</string>
+    <string name="voice_auto_send">Голосовой ввод</string>
+    <string name="voice_auto_send_subtitle">Отправлять сообщение сразу после распознавания речи</string>
+    <string name="settings_detail_subtitle">Внешний вид, голосовой ввод</string>
+    <string name="nsfw_mode_title">Режим 18+</string>
+    <string name="nsfw_mode_subtitle">Снимает ограничения на контент</string>
+    <string name="nsfw_confirm_title">Подтверждение возраста</string>
+    <string name="nsfw_confirm_message">Этот режим открывает доступ к контенту для взрослых (18+).</string>
+    <string name="nsfw_confirm_checkbox">Подтверждаю, что мне есть 18 лет</string>
+    <string name="nsfw_confirm_button">Подтвердить</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Главная</string>
+    <string name="nav_chat_label">Чат</string>
+    <string name="nav_games">Игры</string>
+    <string name="nav_files">Файлы</string>
+    <string name="nav_more">Ещё</string>
+
+    <!-- Documents UI -->
+    <string name="enter_name">Введите имя</string>
+    <string name="save_action">Сохранить</string>
+
+    <!-- Canvas / Knowledge Map -->
+    <string name="filter_all">Все</string>
+    <string name="building_knowledge_map">Строю карту знаний…</string>
+
+    <!-- Notification channels -->
+    <string name="notification_channel_background">Фоновое подключение</string>
+    <string name="notification_channel_background_desc">Служебный канал для фонового WebSocket-подключения</string>
+    <string name="notification_channel_ai_response">Ответы AI-помощника</string>
+    <string name="notification_channel_ai_response_desc">Уведомление когда AI ответил пока приложение было свёрнуто</string>
+    <string name="notification_channel_urgent">Срочные напоминания</string>
+    <string name="notification_channel_urgent_desc">Напоминания с высоким приоритетом (срочные и важные)</string>
+    <string name="notification_channel_reminders">Напоминания</string>
+    <string name="notification_channel_reminders_desc">Обычные напоминания</string>
+    <string name="notification_channel_quiet">Тихие напоминания</string>
+    <string name="notification_channel_quiet_desc">Напоминания без звука и вибрации</string>
+    <string name="notification_channel_system">Системные уведомления</string>
+    <string name="notification_channel_system_desc">Системные и прочие уведомления</string>
+    <string name="reminder_default_text">Время выполнить напоминание</string>
+    <string name="notification_sender_you">Вы</string>
+
+    <!-- Service strings -->
+    <string name="connection_waiting">Подключаюсь…</string>
+    <string name="connection_online">● Онлайн</string>
+    <string name="reminder_default_title">Напоминание</string>
+    <string name="ai_preparing_response">AI помощник готовит ответ…</string>
+</resources>
