@@ -847,7 +847,10 @@ class ChatViewModel @Inject constructor(
                             }
                         }
                     },
-                    onDone = { messageId, content, newConversationId, serverUserMessageId ->
+                    onDone = { messageId, content, newConversationId, serverUserMessageId, doneImageUrl ->
+                        if (doneImageUrl != null && currentImageUrl == null) {
+                            currentImageUrl = doneImageUrl
+                        }
                         // Убираем голые URL файлов из текста — они уже показаны как кнопка скачивания
                         val fileUrls = _generatedFiles.value.map { it.url }.toSet()
                         val rawContent = content.ifEmpty { contentBuilder.toString() }
@@ -915,14 +918,22 @@ class ChatViewModel @Inject constructor(
                                 return@launch
                             }
 
-                            // Extract image URL from markdown content if onImage never fired
-                            if (currentImageUrl == null) {
-                                val mdImg = Regex("""!\[.*?]\((https?://[^)]+)\)""").find(finalContent)
+                            // Strip markdown image references from content — images are
+                            // delivered via imageUrl metadata; keeping markdown causes
+                            // double-rendering (GeneratedImageCard + GlassMarkdown).
+                            val mdImageRegex = Regex("""!\[([^\]]*)\]\(([^)]+)\)""")
+                            val strippedContent = if (currentImageUrl != null) {
+                                mdImageRegex.replace(finalContent, "").trim()
+                            } else {
+                                val mdImg = mdImageRegex.find(finalContent)
                                 if (mdImg != null) {
-                                    currentImageUrl = mdImg.groupValues[1]
-                                    android.util.Log.d("SSE_DBG", "Extracted imageUrl from markdown: ${currentImageUrl?.takeLast(40)}")
+                                    currentImageUrl = mdImg.groupValues[2]
+                                    mdImageRegex.replace(finalContent, "").trim()
+                                } else {
+                                    finalContent
                                 }
                             }
+                            val finalContentClean = strippedContent
 
                             // Сбрасываем streaming-поток — финальный контент идёт в _messages
                             _streamingMessageId.value = null
@@ -933,7 +944,7 @@ class ChatViewModel @Inject constructor(
                                 when (m.id) {
                                     userMessageId -> m.copy(id = canonicalUserMsgId)
                                     streamingMessageId -> m.copy(
-                                        content = finalContent,
+                                        content = finalContentClean,
                                         agentName = null,
                                         imageUrl = currentImageUrl
                                     )
@@ -971,7 +982,7 @@ class ChatViewModel @Inject constructor(
                                     userMessage = text,
                                     userMessageId = canonicalUserMsgId,
                                     assistantMessageId = messageId.ifEmpty { streamingMessageId },
-                                    assistantContent = finalContent,
+                                    assistantContent = finalContentClean,
                                     imageUrl = currentImageUrl,
                                     userImages = attachedImageUrisForDisplay,
                                     generatedFiles = _generatedFiles.value.takeIf { it.isNotEmpty() },
@@ -988,7 +999,7 @@ class ChatViewModel @Inject constructor(
                                         val notificationText = when {
                                             wasImageGeneration && currentImageUrl != null -> "🎨 Изображение сгенерировано"
                                             wasImageGeneration -> null
-                                            finalContent.isNotBlank() -> finalContent.trim()
+                                            finalContentClean.isNotBlank() -> finalContentClean.trim()
                                             else -> null
                                         }
                                         if (notificationText != null) {
@@ -1785,7 +1796,7 @@ class ChatViewModel @Inject constructor(
                                 )
                             }
                         },
-                        onDone = { _, _, newConvId, _ ->
+                        onDone = { _, _, newConvId, _, _ ->
                             newConvId?.let {
                                 if (_currentConversationId.value != it) {
                                     _currentConversationId.value = it

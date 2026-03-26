@@ -546,13 +546,21 @@ fun ChatBubbleV2(
                     base + extra
                 }
 
-                // Split content into ordered segments: text / image / text / ...
-                // Use cleaned content (file links stripped out)
-                val segments = remember(cleanedContent) {
-                    splitIntoSegments(cleanedContent, IMAGE_URL_REGEX)
+                // When imageUrl is present (from metadata), strip markdown image
+                // references from the text to prevent double-rendering.
+                val contentForSegments = remember(cleanedContent, hasGeneratedImage) {
+                    if (hasGeneratedImage) {
+                        IMAGE_URL_REGEX.replace(cleanedContent, "").trim()
+                    } else {
+                        cleanedContent
+                    }
+                }
+
+                val segments = remember(contentForSegments) {
+                    splitIntoSegments(contentForSegments, IMAGE_URL_REGEX)
                 }
                 val hasAnyText = segments.any { it is MessageSegment.Text }
-                val showBubbleContent = cleanedContent.isNotBlank() && !isImagePlaceholder
+                val showBubbleContent = contentForSegments.isNotBlank() && !isImagePlaceholder
                 
                 // Emotion glow for text bubbles (no animation — emotion changes are rare)
                 val eColor = emotion?.let { emotionColor(it.emotion) } ?: Color.Transparent

@@ -79,7 +79,7 @@ interface ChatRepository {
         onConfirmation: (ConfirmationEvent) -> Unit = {},
         onProgress: (ProgressEvent) -> Unit = {},
         onThinkingChain: (ThinkingChainStep) -> Unit = {},
-        onDone: (messageId: String, fullContent: String, newConversationId: String?, userMessageId: String?) -> Unit,
+        onDone: (messageId: String, fullContent: String, newConversationId: String?, userMessageId: String?, imageUrl: String?) -> Unit,
         onError: (String) -> Unit
     )
     
@@ -376,7 +376,7 @@ class ChatRepositoryImpl @Inject constructor(
         onConfirmation: (ConfirmationEvent) -> Unit,
         onProgress: (ProgressEvent) -> Unit,
         onThinkingChain: (ThinkingChainStep) -> Unit,
-        onDone: (messageId: String, fullContent: String, newConversationId: String?, userMessageId: String?) -> Unit,
+        onDone: (messageId: String, fullContent: String, newConversationId: String?, userMessageId: String?, imageUrl: String?) -> Unit,
         onError: (String) -> Unit
     ) {
         sendMessageStreamInternal(
@@ -424,7 +424,7 @@ class ChatRepositoryImpl @Inject constructor(
         onConfirmation: (ConfirmationEvent) -> Unit,
         onProgress: (ProgressEvent) -> Unit = {},
         onThinkingChain: (ThinkingChainStep) -> Unit = {},
-        onDone: (messageId: String, fullContent: String, newConversationId: String?, userMessageId: String?) -> Unit,
+        onDone: (messageId: String, fullContent: String, newConversationId: String?, userMessageId: String?, imageUrl: String?) -> Unit,
         onError: (String) -> Unit,
         isRetry: Boolean
     ) {
@@ -556,12 +556,11 @@ class ChatRepositoryImpl @Inject constructor(
                                 val fullContent = json.optString("full_content")
                                 val newConvId = (json.optString("conversationId").takeIf { it.isNotBlank() }
                                     ?: json.optString("conversation_id")).takeIf { it.isNotBlank() }
-                                val imageUrl = (json.optString("imageUrl").takeIf { it.isNotBlank() }
+                                val doneImageUrl = (json.optString("imageUrl").takeIf { it.isNotBlank() }
                                     ?: json.optString("image_url")).takeIf { it.isNotBlank() }
                                 val serverUserMsgId = (json.optString("userMessageId").takeIf { it.isNotBlank() }
                                     ?: json.optString("user_message_id")).takeIf { it.isNotBlank() }
-                                if (imageUrl != null) onImage(imageUrl, "")
-                                onDone(messageId, fullContent, newConvId, serverUserMsgId)
+                                onDone(messageId, fullContent, newConvId, serverUserMsgId, doneImageUrl)
                                 eventSource.cancel()
                                 if (continuation.isActive) continuation.resume(Unit)
                             }
@@ -619,7 +618,7 @@ class ChatRepositoryImpl @Inject constructor(
                                 val fullContent = result?.optString("final_response") ?: ""
                                 val newConvId = result?.optString("conversation_id")?.takeIf { it.isNotBlank() }
                                 val serverUserMsgId = result?.optString("user_message_id")?.takeIf { it.isNotBlank() }
-                                // Pass workspace_files as generated files
+                                val agentImageUrl = (result?.optString("image_url") ?: "").takeIf { it.isNotBlank() }
                                 val wsFiles = result?.optJSONArray("workspace_files")
                                 if (wsFiles != null) {
                                     for (i in 0 until wsFiles.length()) {
@@ -637,7 +636,7 @@ class ChatRepositoryImpl @Inject constructor(
                                     }
                                 }
                                 onProgress(ProgressEvent(100, 0, 0))
-                                onDone(messageId, fullContent, newConvId, serverUserMsgId)
+                                onDone(messageId, fullContent, newConvId, serverUserMsgId, agentImageUrl)
                                 eventSource.cancel()
                                 if (continuation.isActive) continuation.resume(Unit)
                             }
@@ -916,17 +915,24 @@ class ChatRepositoryImpl @Inject constructor(
                     else -> null
                 }
 
+                val resolvedImageUrl = msg.imageUrl ?: local?.imageUrl
+                val cleanContent = if (resolvedImageUrl != null && msg.role == "assistant") {
+                    msg.content.replace(Regex("""!\[([^\]]*)\]\(([^)]+)\)"""), "").trim()
+                } else {
+                    msg.content
+                }
+
                 ChatMessageEntity(
                     id = msg.id,
                     conversationId = conversationId,
-                    content = msg.content,
+                    content = cleanContent,
                     role = msg.role,
                     agentName = msg.agentName,
                     provider = msg.provider,
                     providerColor = msg.providerColor,
                     modelUsed = msg.modelUsed,
                     createdAt = createdMs,
-                    imageUrl = msg.imageUrl ?: local?.imageUrl,
+                    imageUrl = resolvedImageUrl,
                     images = resolvedImages,
                     filesJson = resolvedFilesJson
                 )
