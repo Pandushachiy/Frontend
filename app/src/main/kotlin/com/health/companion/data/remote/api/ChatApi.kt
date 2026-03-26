@@ -11,7 +11,7 @@ import retrofit2.http.Query
 
 interface ChatApi {
     
-    @POST("chat/send")
+    @POST("chat/v3/send/stream")
     suspend fun sendMessage(@Body request: ChatMessageRequest): ChatMessageResponse
     
     @POST("chat/conversations")
@@ -29,11 +29,8 @@ interface ChatApi {
     @DELETE("chat/conversations/{conversationId}")
     suspend fun deleteConversation(@Path("conversationId") conversationId: String): ConversationDeleteResponse
     
-    @DELETE("chat/conversations/{conversationId}/messages/{messageId}")
-    suspend fun deleteMessage(
-        @Path("conversationId") conversationId: String,
-        @Path("messageId") messageId: String
-    ): MessageDeleteResponse
+    @DELETE("chat/messages/{messageId}")
+    suspend fun deleteMessage(@Path("messageId") messageId: String): MessageDeleteResponse
     
     /**
      * Регенерация названия сессии через LLM
@@ -58,13 +55,15 @@ data class ConfirmActionRequest(
 
 @Serializable
 data class ConfirmActionResponse(
-    val status: String = "ok"
+    @SerialName("confirmation_id") val confirmationId: String,
+    val approved: Boolean,
+    val message: String? = null
 )
 
 @Serializable
 data class RegenerateTitleResponse(
     val title: String,
-    val conversation_id: String? = null
+    val id: String? = null
 )
 
 @Serializable
@@ -195,7 +194,7 @@ data class Citation(
 
 @Serializable
 data class ConversationDeleteResponse(
-    val status: String
+    val message: String
 )
 
 /**

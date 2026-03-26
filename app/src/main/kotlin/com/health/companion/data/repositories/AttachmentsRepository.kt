@@ -48,9 +48,10 @@ class AttachmentsRepositoryImpl @Inject constructor(
     override suspend fun loadAttachments(conversationId: String): Result<List<AttachmentDTO>> {
         return try {
             _isLoading.value = true
-            val result = api.getAttachments(conversationId)
+            val listResponse = api.getAttachments(conversationId)
+            val result = listResponse.attachments
             _attachments.value = result
-            Timber.d("Loaded ${result.size} attachments for conversation $conversationId")
+            Timber.d("Loaded ${result.size} attachments for conversation $conversationId (total=${listResponse.total})")
             Result.success(result)
         } catch (e: Exception) {
             Timber.e(e, "Failed to load attachments")

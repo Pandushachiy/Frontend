@@ -215,9 +215,13 @@ fun ProfileScreen(
                                 GlassDivider()
                                 CompactField(stringResource(R.string.profile_field_weight), state.weight, viewModel::onWeight, theme.primary, KeyboardType.Number)
                                 GlassDivider()
+                                CompactField(stringResource(R.string.profile_field_blood_type), state.bloodType, viewModel::onBloodType, theme.primary)
+                                GlassDivider()
                                 CompactField(stringResource(R.string.profile_field_allergies), state.allergies, viewModel::onAllergies, theme.primary, placeholder = stringResource(R.string.profile_comma_hint))
                                 GlassDivider()
-                                CompactField(stringResource(R.string.profile_field_diseases), state.diseases, viewModel::onDiseases, theme.primary, placeholder = stringResource(R.string.profile_comma_hint))
+                                CompactField(stringResource(R.string.profile_field_diseases), state.chronicConditions, viewModel::onChronicConditions, theme.primary, placeholder = stringResource(R.string.profile_comma_hint))
+                                GlassDivider()
+                                CompactField(stringResource(R.string.profile_field_medications), state.medications, viewModel::onMedications, theme.primary, placeholder = stringResource(R.string.profile_comma_hint))
                             }
                         }
                     }

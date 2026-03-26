@@ -6,7 +6,7 @@ import com.health.companion.data.remote.api.ChatApi
 import com.health.companion.data.remote.api.ChatMessageRequest
 import com.health.companion.data.remote.api.ChatMessageResponse
 import com.health.companion.data.remote.api.ConversationDTO
-import com.health.companion.data.remote.api.DeleteResponse
+import com.health.companion.data.remote.api.ConversationDeleteResponse
 import com.health.companion.services.WebSocketManager
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -156,7 +156,7 @@ class ChatRepositoryTest {
         // Arrange
         val conversationId = "conv-to-delete"
         
-        coEvery { chatApi.deleteConversation(conversationId) } returns DeleteResponse(status = "deleted")
+        coEvery { chatApi.deleteConversation(conversationId) } returns ConversationDeleteResponse(message = "deleted")
         coEvery { chatMessageDao.deleteByConversation(conversationId) } just runs
 
         // Act

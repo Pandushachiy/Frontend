@@ -23,8 +23,8 @@ interface DocumentApi {
     
     @GET("documents/")
     suspend fun getDocuments(
-        @Query("skip") skip: Int = 0,
-        @Query("limit") limit: Int = 20
+        @Query("page") page: Int = 1,
+        @Query("size") size: Int = 20
     ): DocumentsListResponse
     
     @GET("documents/{documentId}/")

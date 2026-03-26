@@ -27,7 +27,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -101,8 +100,7 @@ class ChatConnectionService : Service() {
     private var reconnectJob: Job? = null
     private var reconnectAttempt = 0
 
-    // stream_id → { conversation_id, accumulated text }
-    private val streamBuffers = mutableMapOf<String, Pair<String, StringBuilder>>()
+    private val streamBuffers = java.util.concurrent.ConcurrentHashMap<String, Pair<String, StringBuilder>>()
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
@@ -201,13 +199,16 @@ class ChatConnectionService : Service() {
     // ────────────────────────────────────────────────────────
 
     private fun connectWebSocket() {
-        val token = runBlocking { tokenManager.getAccessToken() } ?: run {
+        val token = tokenManager.getAccessTokenSync() ?: run {
             Timber.w("ChatConnectionService: no token — cannot connect WebSocket")
             return
         }
 
         val wsUrl = "${BuildConfig.WS_URL}?token=$token"
-        val request = Request.Builder().url(wsUrl).build()
+        val request = Request.Builder()
+            .url(wsUrl)
+            .header("Authorization", "Bearer $token")
+            .build()
 
         webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
 
@@ -483,8 +484,8 @@ class ChatConnectionService : Service() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AIHealthCompanion:WsConnection").also {
             it.setReferenceCounted(false)
-            it.acquire()
-            Timber.d("ChatConnectionService: WakeLock acquired")
+            it.acquire(10 * 60 * 1000L)
+            Timber.d("ChatConnectionService: WakeLock acquired (10min timeout)")
         }
 
         val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager

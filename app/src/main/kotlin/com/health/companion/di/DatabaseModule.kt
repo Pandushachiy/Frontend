@@ -28,7 +28,7 @@ object DatabaseModule {
         HealthCompanionDatabase::class.java,
         "health_companion.db"
     )
-        .fallbackToDestructiveMigration()
+        .fallbackToDestructiveMigrationOnDowngrade()
         .build()
     
     @Singleton

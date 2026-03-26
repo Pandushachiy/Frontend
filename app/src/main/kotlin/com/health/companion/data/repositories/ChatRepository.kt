@@ -100,6 +100,7 @@ interface ChatRepository {
     /** Emits when a background task finishes and sends result via WebSocket. */
     val backgroundTaskEvents: Flow<WsEvent.BackgroundTaskResult>
     suspend fun disconnectWebSocket()
+    fun disconnectWebSocketSync()
     suspend fun confirmAction(confirmationId: String, approved: Boolean): Result<Unit>
     suspend fun clearAllLocalData()
     
@@ -550,11 +551,15 @@ class ChatRepositoryImpl @Inject constructor(
                                 onCitations(list)
                             }
                             "done" -> {
-                                val messageId = json.optString("message_id")
+                                val messageId = json.optString("messageId").takeIf { it.isNotBlank() }
+                                    ?: json.optString("message_id")
                                 val fullContent = json.optString("full_content")
-                                val newConvId = json.optString("conversation_id").takeIf { it.isNotBlank() }
-                                val imageUrl = json.optString("image_url").takeIf { it.isNotBlank() }
-                                val serverUserMsgId = json.optString("user_message_id").takeIf { it.isNotBlank() }
+                                val newConvId = (json.optString("conversationId").takeIf { it.isNotBlank() }
+                                    ?: json.optString("conversation_id")).takeIf { it.isNotBlank() }
+                                val imageUrl = (json.optString("imageUrl").takeIf { it.isNotBlank() }
+                                    ?: json.optString("image_url")).takeIf { it.isNotBlank() }
+                                val serverUserMsgId = (json.optString("userMessageId").takeIf { it.isNotBlank() }
+                                    ?: json.optString("user_message_id")).takeIf { it.isNotBlank() }
                                 if (imageUrl != null) onImage(imageUrl, "")
                                 onDone(messageId, fullContent, newConvId, serverUserMsgId)
                                 eventSource.cancel()
@@ -568,7 +573,8 @@ class ChatRepositoryImpl @Inject constructor(
                                 if (continuation.isActive) continuation.resume(Unit)
                             }
                             "conversation" -> {
-                                val convId = json.optString("conversation_id").takeIf { it.isNotBlank() }
+                                val convId = (json.optString("conversationId").takeIf { it.isNotBlank() }
+                                    ?: json.optString("conversation_id")).takeIf { it.isNotBlank() }
                                 val title = json.optString("title", "")
                                 if (convId != null) onConversation(convId, title)
                             }
@@ -636,15 +642,14 @@ class ChatRepositoryImpl @Inject constructor(
                                 if (continuation.isActive) continuation.resume(Unit)
                             }
                             "summary_updated" -> {
-                                val convId = json.optString("conversationId").takeIf { it.isNotBlank() }
+                                val convId = (json.optString("conversationId").takeIf { it.isNotBlank() }
+                                    ?: json.optString("conversation_id")).takeIf { it.isNotBlank() }
                                 val summaryText = json.optString("summary").takeIf { it.isNotBlank() }
                                 if (convId != null && summaryText != null) {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        try {
-                                            conversationDao.updateSummary(convId, summaryText)
-                                        } catch (e: Exception) {
-                                            Timber.w(e, "Failed to update summary")
-                                        }
+                                    try {
+                                        conversationDao.updateSummary(convId, summaryText)
+                                    } catch (e: Exception) {
+                                        Timber.w(e, "Failed to update summary")
                                     }
                                 }
                             }
@@ -987,7 +992,7 @@ class ChatRepositoryImpl @Inject constructor(
             chatMessageDao.deleteById(messageId)
             // Try to delete on backend (mark as excluded from context)
             try {
-                chatApi.deleteMessage(conversationId, messageId)
+                chatApi.deleteMessage(messageId)
             } catch (e: Exception) {
                 // Backend might not support this yet - that's ok
                 Timber.w(e, "Backend delete message failed, local delete succeeded")
@@ -1031,6 +1036,10 @@ class ChatRepositoryImpl @Inject constructor(
         webSocketManager.events.filterIsInstance()
     
     override suspend fun disconnectWebSocket() {
+        webSocketManager.disconnect()
+    }
+
+    override fun disconnectWebSocketSync() {
         webSocketManager.disconnect()
     }
     

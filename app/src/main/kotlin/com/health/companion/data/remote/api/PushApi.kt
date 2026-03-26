@@ -12,37 +12,37 @@ interface PushApi {
     /**
      * Get VAPID public key for Web Push (not needed for FCM, but available)
      */
-    @GET("push/vapid-key/")
+    @GET("push/vapid-key")
     suspend fun getVapidKey(): VapidKeyResponse
 
     /**
      * Subscribe to push notifications
      */
-    @POST("push/subscribe/")
+    @POST("push/subscribe")
     suspend fun subscribe(@Body request: PushSubscribeRequest): PushSubscribeResponse
 
     /**
      * Unsubscribe from push notifications
      */
-    @POST("push/unsubscribe/")
+    @POST("push/unsubscribe")
     suspend fun unsubscribe(@Body request: PushUnsubscribeRequest): PushUnsubscribeResponse
 
     /**
      * Get user's push subscriptions
      */
-    @GET("push/subscriptions/")
-    suspend fun getSubscriptions(): PushSubscriptionsResponse
+    @GET("push/subscriptions")
+    suspend fun getSubscriptions(): List<PushSubscription>
 
     /**
      * Send test notification
      */
-    @POST("push/test/")
+    @POST("push/test")
     suspend fun sendTestNotification(): TestNotificationResponse
 
     /**
      * Get push statistics
      */
-    @GET("push/stats/")
+    @GET("push/stats")
     suspend fun getStats(): PushStatsResponse
 }
 
@@ -58,7 +58,7 @@ data class PushSubscribeRequest(
 
 @Serializable
 data class PushUnsubscribeRequest(
-    val token: String
+    @SerialName("subscription_id") val subscriptionId: String
 )
 
 // ========== RESPONSE MODELS ==========
@@ -79,12 +79,6 @@ data class PushSubscribeResponse(
 data class PushUnsubscribeResponse(
     val success: Boolean = true,
     val message: String? = null
-)
-
-@Serializable
-data class PushSubscriptionsResponse(
-    val subscriptions: List<PushSubscription> = emptyList(),
-    val total: Int = 0
 )
 
 @Serializable

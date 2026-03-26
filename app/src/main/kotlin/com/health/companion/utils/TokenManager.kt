@@ -90,7 +90,18 @@ class TokenManager @Inject constructor(
         cachedAccessToken = null
         cachedRefreshToken = null
         cachedUserId = null
-        Timber.d("Tokens cleared from cache (sync)")
+        kotlinx.coroutines.runBlocking {
+            try {
+                dataStore.edit { prefs ->
+                    prefs.remove(ACCESS_TOKEN)
+                    prefs.remove(REFRESH_TOKEN)
+                    prefs.remove(USER_ID)
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "clearTokensSync: DataStore clear failed")
+            }
+        }
+        Timber.d("Tokens cleared from cache + DataStore (sync)")
     }
     
     suspend fun saveTokens(

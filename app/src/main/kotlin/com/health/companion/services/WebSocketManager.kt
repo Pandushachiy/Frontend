@@ -25,7 +25,9 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import org.json.JSONObject as OrgJsonObject
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -90,8 +92,10 @@ class WebSocketManager @Inject constructor(
 ) {
     
     private var webSocket: WebSocket? = null
+    private var currentUserId: String? = null
+    private val reconnectAttempt = AtomicInteger(0)
+    private var reconnectEnabled = true
     
-    // Legacy flow for backward compatibility
     private val _messages = MutableSharedFlow<WebSocketMessage>(replay = 0)
     val messages = _messages.asSharedFlow()
     
@@ -117,7 +121,8 @@ class WebSocketManager @Inject constructor(
      * URL format: ws://HOST/api/v1/chat/ws?token=JWT_TOKEN
      */
     fun connect(userId: String): Flow<WebSocketMessage> = callbackFlow {
-        // Get JWT token from cache (preloaded at app start)
+        currentUserId = userId
+        reconnectAttempt.set(0)
         val token = tokenManager.getAccessTokenSync()
         
         if (token == null) {
@@ -127,17 +132,18 @@ class WebSocketManager @Inject constructor(
             return@callbackFlow
         }
         
-        // Use token as query parameter, NOT in path!
         val wsUrl = "${BuildConfig.WS_URL}?token=$token"
-        Timber.d("WebSocket connecting to: ${BuildConfig.WS_URL}?token=***")
+        Timber.d("WebSocket connecting to: ${BuildConfig.WS_URL}")
         
         val request = Request.Builder()
             .url(wsUrl)
+            .header("Authorization", "Bearer $token")
             .build()
         
         val listener = object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Timber.d("WebSocket connected for user: $userId")
+                reconnectAttempt.set(0)
                 _connectionState.value = true
                 _events.tryEmit(WsEvent.Connected)
             }
@@ -153,7 +159,7 @@ class WebSocketManager @Inject constructor(
                 _connectionState.value = false
                 _events.tryEmit(WsEvent.Error(t.message ?: "Connection failed"))
                 _events.tryEmit(WsEvent.Disconnected)
-                close(t)
+                scheduleReconnect()
             }
             
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
@@ -165,7 +171,7 @@ class WebSocketManager @Inject constructor(
                 Timber.d("WebSocket closed: $code - $reason")
                 _connectionState.value = false
                 _events.tryEmit(WsEvent.Disconnected)
-                close()
+                if (code != 1000) scheduleReconnect()
             }
         }
         
@@ -300,25 +306,67 @@ class WebSocketManager @Inject constructor(
         }
     }
     
+    private fun scheduleReconnect() {
+        if (!reconnectEnabled) return
+        val uid = currentUserId ?: return
+        val attempt = reconnectAttempt.getAndIncrement()
+        val delay = (3000L * (1L shl attempt.coerceAtMost(4))).coerceAtMost(60_000L)
+        Timber.d("WebSocket: scheduling reconnect in ${delay}ms (attempt $attempt)")
+        Thread {
+            try {
+                Thread.sleep(delay)
+                if (!_connectionState.value && reconnectEnabled) {
+                    val token = tokenManager.getAccessTokenSync() ?: return@Thread
+                    val wsUrl = "${BuildConfig.WS_URL}?token=$token"
+                    val request = Request.Builder()
+                        .url(wsUrl)
+                        .header("Authorization", "Bearer $token")
+                        .build()
+                    webSocket = okHttpClient.newWebSocket(request, object : WebSocketListener() {
+                        override fun onOpen(ws: WebSocket, response: Response) {
+                            reconnectAttempt.set(0)
+                            _connectionState.value = true
+                            _events.tryEmit(WsEvent.Connected)
+                            Timber.d("WebSocket reconnected for user: $uid")
+                        }
+                        override fun onMessage(ws: WebSocket, text: String) {
+                            handleMessage(text) { msg -> _messages.tryEmit(msg) }
+                        }
+                        override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
+                            _connectionState.value = false
+                            _events.tryEmit(WsEvent.Disconnected)
+                            scheduleReconnect()
+                        }
+                        override fun onClosed(ws: WebSocket, code: Int, reason: String) {
+                            _connectionState.value = false
+                            _events.tryEmit(WsEvent.Disconnected)
+                            if (code != 1000) scheduleReconnect()
+                        }
+                    })
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "WebSocket reconnect failed")
+            }
+        }.start()
+    }
+
     suspend fun send(message: String) {
         webSocket?.send(message) ?: run {
             Timber.w("WebSocket not connected, cannot send message")
         }
     }
     
-    /**
-     * Send chat message with streaming support
-     */
     suspend fun sendChatMessage(text: String, conversationId: String? = null, stream: Boolean = true) {
-        val messageJson = buildString {
-            append("""{"type":"chat_message","data":{"message":""")
-            append(json.encodeToString(kotlinx.serialization.serializer<String>(), text))
-            if (conversationId != null) {
-                append(""","conversation_id":"$conversationId"""")
-            }
-            append(""","stream":$stream}}""")
+        val data = OrgJsonObject().apply {
+            put("message", text)
+            if (conversationId != null) put("conversation_id", conversationId)
+            put("stream", stream)
         }
-        send(messageJson)
+        val messageJson = OrgJsonObject().apply {
+            put("type", "chat_message")
+            put("data", data)
+        }
+        send(messageJson.toString())
     }
     
     suspend fun sendTyping() {
@@ -334,6 +382,7 @@ class WebSocketManager @Inject constructor(
     }
     
     fun disconnect() {
+        reconnectEnabled = false
         webSocket?.close(1000, "Client disconnect")
         webSocket = null
         _connectionState.value = false

@@ -89,16 +89,13 @@ class AuthRepositoryImpl @Inject constructor(
             Timber.d("Registration successful for: $email")
             tokenManager.saveUserInfo(name = name, email = email)
 
-            // Если бэкенд вернул токены сразу — сохраняем
-            if (response.access_token != null && response.refresh_token != null) {
-                tokenManager.saveTokens(
-                    accessToken = response.access_token,
-                    refreshToken = response.refresh_token,
-                    userId = response.id ?: email,
-                    userEmail = email
-                )
-                fcmTokenRepository.uploadCurrentToken()
-            }
+            tokenManager.saveTokens(
+                accessToken = response.access_token,
+                refreshToken = response.refresh_token,
+                userId = email,
+                userEmail = email
+            )
+            fcmTokenRepository.uploadCurrentToken()
 
             Result.success(response)
         } catch (e: HttpException) {

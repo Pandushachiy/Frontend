@@ -122,8 +122,10 @@
     <string name="profile_field_language">Язык</string>
     <string name="profile_field_height">Рост, см</string>
     <string name="profile_field_weight">Вес, кг</string>
+    <string name="profile_field_blood_type">Группа крови</string>
     <string name="profile_field_allergies">Аллергии</string>
     <string name="profile_field_diseases">Заболевания</string>
+    <string name="profile_field_medications">Лекарства</string>
     <string name="profile_comma_hint">через запятую</string>
 
     <!-- Settings -->

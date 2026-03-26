@@ -32,7 +32,7 @@ interface AttachmentsApi {
     @GET("attachments/{conversationId}")
     suspend fun getAttachments(
         @Path("conversationId") conversationId: String
-    ): List<AttachmentDTO>
+    ): AttachmentListResponse
     
     /**
      * Удалить вложение
@@ -64,6 +64,12 @@ data class AttachmentStatusResponse(
     @SerialName("has_text")
     val hasText: Boolean = false,
     val description: String? = null
+)
+
+@Serializable
+data class AttachmentListResponse(
+    val attachments: List<AttachmentDTO> = emptyList(),
+    val total: Int = 0
 )
 
 @Serializable

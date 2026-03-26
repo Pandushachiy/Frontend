@@ -29,9 +29,10 @@ data class ProfileFormState(
     // Med card
     val height: String = "",
     val weight: String = "",
-    val bloodGroup: String = "",
+    val bloodType: String = "",
     val allergies: String = "",
-    val diseases: String = "",
+    val chronicConditions: String = "",
+    val medications: String = "",
     // UI
     val error: String? = null,
     val message: String? = null
@@ -65,9 +66,10 @@ class ProfileScreenViewModel @Inject constructor(
                         email = p.email ?: "",
                         height = p.medCard?.height?.toString() ?: "",
                         weight = p.medCard?.weight?.toString() ?: "",
-                        bloodGroup = p.medCard?.bloodGroup ?: "",
+                        bloodType = p.medCard?.bloodType ?: "",
                         allergies = p.medCard?.allergies?.joinToString(", ") ?: "",
-                        diseases = p.medCard?.diseases?.joinToString(", ") ?: ""
+                        chronicConditions = p.medCard?.chronicConditions?.joinToString(", ") ?: "",
+                        medications = p.medCard?.medications?.joinToString(", ") ?: ""
                     )
                 }
                 return@launch
@@ -97,9 +99,10 @@ class ProfileScreenViewModel @Inject constructor(
     fun onAvatar(v: String?)     { _state.update { it.copy(avatarEmoji = v) } }
     fun onHeight(v: String)      { if (v.all { c -> c.isDigit() }) _state.update { it.copy(height = v) } }
     fun onWeight(v: String)      { if (v.all { c -> c.isDigit() }) _state.update { it.copy(weight = v) } }
-    fun onBloodGroup(v: String)  { _state.update { it.copy(bloodGroup = v) } }
+    fun onBloodType(v: String)  { _state.update { it.copy(bloodType = v) } }
     fun onAllergies(v: String)   { _state.update { it.copy(allergies = v) } }
-    fun onDiseases(v: String)    { _state.update { it.copy(diseases = v) } }
+    fun onChronicConditions(v: String) { _state.update { it.copy(chronicConditions = v) } }
+    fun onMedications(v: String) { _state.update { it.copy(medications = v) } }
 
     fun consumeMessage() { _state.update { it.copy(message = null) } }
 
@@ -120,9 +123,10 @@ class ProfileScreenViewModel @Inject constructor(
             val medReq = UpdateMedCardRequest(
                 height = s.height.toIntOrNull(),
                 weight = s.weight.toIntOrNull(),
-                bloodGroup = s.bloodGroup.takeIf { it.isNotBlank() },
+                bloodType = s.bloodType.takeIf { it.isNotBlank() },
                 allergies = s.allergies.split(",").map { it.trim() }.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() },
-                diseases = s.diseases.split(",").map { it.trim() }.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
+                chronicConditions = s.chronicConditions.split(",").map { it.trim() }.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() },
+                medications = s.medications.split(",").map { it.trim() }.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
             )
 
             val profileResult = async { repo.updateProfileMe(profileReq) }

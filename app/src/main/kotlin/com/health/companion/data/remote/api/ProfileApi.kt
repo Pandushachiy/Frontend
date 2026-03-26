@@ -76,9 +76,10 @@ data class ProfileMeResponse(
 data class MedCard(
     val height: Int? = null,
     val weight: Int? = null,
-    val bloodGroup: String? = null,
+    val bloodType: String? = null,
     val allergies: List<String> = emptyList(),
-    val diseases: List<String> = emptyList()
+    val chronicConditions: List<String> = emptyList(),
+    val medications: List<String> = emptyList()
 )
 
 @Serializable
@@ -94,9 +95,10 @@ data class UpdateProfileRequest(
 data class UpdateMedCardRequest(
     val height: Int? = null,
     val weight: Int? = null,
-    val bloodGroup: String? = null,
+    val bloodType: String? = null,
     val allergies: List<String>? = null,
-    val diseases: List<String>? = null
+    val chronicConditions: List<String>? = null,
+    val medications: List<String>? = null
 )
 
 @Serializable
@@ -187,8 +189,8 @@ data class RoutingStatsResponse(
 
 @Serializable
 data class DeleteResponse(
-    val message: String,
-    val success: Boolean = true
+    val message: String = "",
+    val id: String = ""
 )
 
 // ═════════════════════════════════════════════════════════════

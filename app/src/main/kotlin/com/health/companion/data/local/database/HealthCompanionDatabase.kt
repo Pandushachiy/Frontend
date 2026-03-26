@@ -18,7 +18,7 @@ import com.health.companion.data.local.dao.MoodEntryDao
         DocumentEntity::class
     ],
     version = 9,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class HealthCompanionDatabase : RoomDatabase() {

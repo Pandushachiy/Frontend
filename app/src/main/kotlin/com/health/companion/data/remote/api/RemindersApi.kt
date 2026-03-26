@@ -48,7 +48,7 @@ interface RemindersApi {
     @GET("reminders/stats")
     suspend fun getStats(): ReminderStatsResponse
 
-    @PATCH("reminders/{id}/edit")
+    @PATCH("reminders/{id}")
     suspend fun editReminder(
         @Path("id") id: String,
         @Body request: EditReminderRequest

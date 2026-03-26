@@ -41,14 +41,9 @@ data class RegisterRequest(
 
 @Serializable
 data class RegisterResponse(
-    val access_token: String? = null,
-    val refresh_token: String? = null,
-    val token_type: String = "bearer",
-    val id: String? = null,
-    val email: String? = null,
-    val name: String? = null,
-    val is_active: Boolean = true,
-    val created_at: String? = null
+    val access_token: String,
+    val refresh_token: String,
+    val token_type: String = "bearer"
 )
 
 @Serializable
@@ -68,8 +63,7 @@ data class ChangePasswordRequest(
 
 @Serializable
 data class ChangePasswordResponse(
-    val status: String = "ok",
-    val message: String? = null
+    val message: String
 )
 
 @Serializable
@@ -77,7 +71,7 @@ data class LoginResponse(
     val access_token: String,
     val refresh_token: String,
     val token_type: String = "bearer",
-    val expires_in: Int = 1800
+    val expires_in: Int? = null
 )
 
 @Serializable
@@ -85,7 +79,7 @@ data class TokenResponse(
     val access_token: String,
     val refresh_token: String? = null,
     val token_type: String = "bearer",
-    val expires_in: Int = 1800
+    val expires_in: Int? = null
 )
 
 @Serializable
@@ -95,6 +89,5 @@ data class RefreshTokenRequest(
 
 @Serializable
 data class LogoutResponse(
-    val status: String = "ok",
-    val message: String = ""
+    val message: String
 )

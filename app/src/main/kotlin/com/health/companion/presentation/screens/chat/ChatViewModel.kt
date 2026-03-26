@@ -265,14 +265,13 @@ class ChatViewModel @Inject constructor(
     private fun recoverStreamingDraftIfNeeded() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                _isStreaming.value = false
                 val convId = _currentConversationId.value ?: return@launch
-                // 1. Чистим черновик если есть
                 val draft = chatRepository.getStreamingDraft(convId)
                 if (draft != null) {
                     Timber.w("recoverStreamingDraft: found interrupted draft id=${draft.id} len=${draft.content.length}")
                     chatRepository.clearStreamingDrafts(convId)
                 }
-                // 2. Синхронизируем с сервером — забираем готовый ответ (изображение, текст и т.д.)
                 Timber.d("recoverStreamingDraft: syncing $convId from server")
                 chatRepository.syncConversationMessages(convId)
             } catch (e: Exception) {
@@ -288,19 +287,17 @@ class ChatViewModel @Inject constructor(
      */
     fun syncOnResume() {
         val convId = _currentConversationId.value ?: return
-        // Если идёт активный стриминг — Room Flow всё равно заблокирован,
-        // данные придут через polling loop в onError. Пропускаем.
-        // Но если _isStreaming завис (процесс был заморожен Realme) —
-        // то не блокируем, т.к. onError вызовет polling отдельно.
         if (_isStreaming.value) {
-            android.util.Log.w("SSE_PERSIST", "syncOnResume SKIP (streaming active — onError will poll)")
-            return
+            val sinceLast = System.currentTimeMillis() - lastStreamEndMs
+            if (sinceLast > 120_000) {
+                Timber.w("syncOnResume: _isStreaming stuck for ${sinceLast}ms — force-resetting")
+                _isStreaming.value = false
+            } else {
+                return
+            }
         }
         val sinceLast = System.currentTimeMillis() - lastStreamEndMs
-        if (sinceLast < 30_000) {
-            android.util.Log.w("SSE_PERSIST", "syncOnResume SKIP (cooldown ${sinceLast}ms)")
-            return
-        }
+        if (sinceLast < 15_000) return
         android.util.Log.w("SSE_PERSIST", "syncOnResume for $convId")
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -455,8 +452,9 @@ class ChatViewModel @Inject constructor(
                     chatRepository.connectWebSocket(userId)
                         .catch { e -> Timber.e(e, "WebSocket error") }
                         .collect { message ->
+                            if (_currentConversationId.value == null) return@collect
                             val lastMessage = _messages.value.lastOrNull()
-                            if (lastMessage?.role == "assistant") {
+                            if (lastMessage?.role == "assistant" && !_isStreaming.value) {
                                 val updatedMessages = _messages.value.toMutableList()
                                 updatedMessages[updatedMessages.lastIndex] = lastMessage.copy(
                                     content = lastMessage.content + message.chunk
@@ -2023,12 +2021,7 @@ class ChatViewModel @Inject constructor(
         super.onCleared()
         voiceInputManager.destroy()
         voiceRepository.release()
-        viewModelScope.launch {
-            chatRepository.disconnectWebSocket()
-        }
-        // ChatConnectionService intentionally NOT stopped here — it must stay alive
-        // on all screens to deliver reminders and AI-initiated messages in background.
-        // Service is stopped only on explicit logout (see SettingsViewModel.logout).
+        chatRepository.disconnectWebSocketSync()
     }
 
     private fun upsertMessage(message: MessageDTO) {

@@ -10,7 +10,7 @@ import javax.inject.Singleton
 interface PushRepository {
     suspend fun subscribe(fcmToken: String): Result<PushSubscribeResponse>
     suspend fun unsubscribe(fcmToken: String): Result<PushUnsubscribeResponse>
-    suspend fun getSubscriptions(): Result<PushSubscriptionsResponse>
+    suspend fun getSubscriptions(): Result<List<PushSubscription>>
     suspend fun sendTestNotification(): Result<TestNotificationResponse>
     suspend fun getStats(): Result<PushStatsResponse>
 }
@@ -43,7 +43,7 @@ class PushRepositoryImpl @Inject constructor(
 
     override suspend fun unsubscribe(fcmToken: String): Result<PushUnsubscribeResponse> {
         return try {
-            val request = PushUnsubscribeRequest(token = fcmToken)
+            val request = PushUnsubscribeRequest(subscriptionId = fcmToken)
             val response = pushApi.unsubscribe(request)
             Timber.d("Push unsubscription successful")
             Result.success(response)
@@ -53,10 +53,10 @@ class PushRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getSubscriptions(): Result<PushSubscriptionsResponse> {
+    override suspend fun getSubscriptions(): Result<List<PushSubscription>> {
         return try {
             val response = pushApi.getSubscriptions()
-            Timber.d("Got ${response.total} push subscriptions")
+            Timber.d("Got ${response.size} push subscriptions")
             Result.success(response)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get push subscriptions")
